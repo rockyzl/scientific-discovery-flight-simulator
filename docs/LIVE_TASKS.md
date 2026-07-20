@@ -1,7 +1,7 @@
 # Scientific Discovery Flight Simulator — live tasks
 
 Status date: 2026-07-20
-Project state: implementation and local validation complete; awaiting lead publication
+Project state: public MVP published and registered locally
 Source memo: `../../../../sciencesloop-lab/journal/2026-07-19-scientific-discovery-flight-simulator.md`
 
 ## Objective
@@ -48,8 +48,8 @@ Phases: independent intake → contracts/ownership → parallel build → QA →
 - [x] Implement a small transfer world and public demo.
 - [x] Run independent QA and targeted correction rounds.
 - [x] Validate the complete project locally.
-- [ ] Create the GitHub repository and push the validated project.
-- [ ] Register the project in the local project hub only after the repository is usable.
+- [x] Create the GitHub repository and push the validated project.
+- [x] Register the project in the local project hub only after the repository is usable.
 
 ## Product and documentation deliverables
 
@@ -184,6 +184,7 @@ the completed artifacts are loaded.
 
 ## Current handoff
 
-Implementation, documentation, independent QA, correction rounds, and local validation are
-complete. The lead owns the remaining publication actions: create and push the GitHub repository,
-then register the usable public repository in the local project hub.
+The public MVP is available at
+`https://github.com/rockyzl/scientific-discovery-flight-simulator`. Implementation,
+documentation, independent QA, correction rounds, local validation, publication, and local hub
+registration are complete.
