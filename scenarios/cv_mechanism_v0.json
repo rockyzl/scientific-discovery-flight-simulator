@@ -1,0 +1,27 @@
+{
+  "schema_version": "1.0",
+  "scenario_id": "cv-mechanism-v0-challenge",
+  "scenario_version": "0.1.0",
+  "provenance": "simulated",
+  "disclaimer": "Transparent teaching emulator. Not a laboratory measurement, property predictor, or complete cyclic-voltammetry model.",
+  "planner_seed": 5772,
+  "world": {
+    "type": "cv_mechanism",
+    "world_id": "virtual-cv-mechanism-lab",
+    "world_version": "0.1.0",
+    "controls": {
+      "scan_rate_mv_s": [5.0, 500.0]
+    },
+    "operations": ["measure", "calibrate"],
+    "total_attempt_budget": 12,
+    "total_measurement_budget": 10,
+    "noise_sigma": 0.05
+  },
+  "failure_profile": {
+    "name": "timeout-drift-saturation-v0",
+    "timeout_attempts": [2],
+    "drift_start_attempt": 6,
+    "drift_per_attempt": 0.035,
+    "saturation_threshold": 2.2
+  }
+}

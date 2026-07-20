@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Replay and compare simulated scientific experiment-selection campaigns.">
+  <title>Scientific Discovery Flight Simulator</title>
+  <link rel="stylesheet" href="/styles.css">
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to comparison</a>
+
+  <header class="site-header">
+    <div class="shell">
+      <p class="eyebrow">Evidence-Driven Discovery Sandbox</p>
+      <h1>Scientific Discovery Flight Simulator</h1>
+      <p class="lede">
+        Compare how experiment-selection policies behave under one frozen synthetic world,
+        budget, noise schedule, and failure schedule.
+      </p>
+    </div>
+  </header>
+
+  <div class="simulation-banner" role="note">
+    <span aria-hidden="true">◆</span>
+    <strong>SIMULATED RUN — NOT A LAB MEASUREMENT</strong>
+  </div>
+
+  <main id="main" class="shell" tabindex="-1">
+    <p id="load-status" class="load-status" role="status" aria-live="polite">
+      Loading frozen artifacts…
+    </p>
+
+    <section class="panel identity" aria-labelledby="identity-heading">
+      <div class="section-heading">
+        <div>
+          <p class="section-number">01 — run identity</p>
+          <h2 id="identity-heading">Same test, visible contract</h2>
+        </div>
+        <span id="run-state" class="status-pill" data-state="loading">LOADING</span>
+      </div>
+      <dl id="identity-grid" class="identity-grid"></dl>
+      <p class="trust-note">
+        The planners saw public campaign state only. Hidden mechanism parameters, future failures,
+        and evaluator logic were not planner inputs.
+      </p>
+    </section>
+
+    <section class="panel" aria-labelledby="comparison-heading">
+      <div class="section-heading">
+        <div>
+          <p class="section-number">02 — planner comparison</p>
+          <h2 id="comparison-heading">Different policies, separate outcomes</h2>
+        </div>
+      </div>
+      <p class="section-intro">
+        No opaque overall score: scientific outcome, costs, validation, and failure recovery remain
+        separate. A simpler planner matching a more complex one is a meaningful result.
+      </p>
+      <div id="planner-cards" class="planner-cards" aria-label="Planner summary cards"></div>
+      <div class="table-scroll" tabindex="0" aria-label="Scrollable planner comparison table">
+        <table>
+          <caption>Metrics recorded in the frozen summary artifact</caption>
+          <thead id="comparison-head"></thead>
+          <tbody id="comparison-body"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel" aria-labelledby="replay-heading">
+      <div class="section-heading">
+        <div>
+          <p class="section-number">03 — evidence replay</p>
+          <h2 id="replay-heading">Inspect every decision and cost</h2>
+        </div>
+      </div>
+      <p class="section-intro">
+        This is a replay of saved JSON events, not a live experiment. Choose a policy to inspect its
+        proposals, validation decisions, simulated observations, failures, beliefs, and stop reason.
+      </p>
+      <div id="replay-tabs" class="tabs" role="tablist" aria-label="Choose planner replay"></div>
+      <div
+        id="replay-panel"
+        role="tabpanel"
+        aria-labelledby="replay-tab-random"
+        tabindex="0"
+      >
+        <div id="replay-summary" class="replay-summary"></div>
+        <ol id="event-list" class="event-list" aria-live="polite"></ol>
+      </div>
+    </section>
+
+    <section class="panel" aria-labelledby="downloads-heading">
+      <div class="section-heading">
+        <div>
+          <p class="section-number">04 — artifacts</p>
+          <h2 id="downloads-heading">Inspect the source JSON</h2>
+        </div>
+      </div>
+      <nav class="download-grid" aria-label="Artifact downloads">
+        <a href="/artifacts/manifest.json" download>Manifest JSON</a>
+        <a href="/artifacts/summary.json" download>Summary JSON</a>
+        <a href="/artifacts/ledgers/random.json" download>Random ledger</a>
+        <a href="/artifacts/ledgers/fixed_grid.json" download>Fixed-grid ledger</a>
+        <a href="/artifacts/ledgers/information_gain.json" download>Information-gain ledger</a>
+      </nav>
+    </section>
+
+    <section class="panel reveal" aria-labelledby="reveal-heading">
+      <div class="section-heading">
+        <div>
+          <p class="section-number">05 — post-run reveal</p>
+          <h2 id="reveal-heading">Benchmark hidden truth</h2>
+        </div>
+      </div>
+      <p id="reveal-explanation" class="section-intro">
+        Hidden truth remains concealed until all artifacts load and every campaign is complete.
+      </p>
+      <button id="reveal-button" class="primary-button" type="button" disabled>
+        Reveal benchmark truth
+      </button>
+      <div
+        id="truth-panel"
+        class="truth-panel"
+        role="region"
+        aria-labelledby="reveal-heading"
+        aria-live="polite"
+        tabindex="-1"
+        hidden
+      >
+        <p class="truth-label">SYNTHETIC BENCHMARK TRUTH — NOT EXPERIMENTAL TRUTH</p>
+        <pre id="truth-value"></pre>
+        <p class="truth-warning">
+          Private replay seeds below reproduce this synthetic benchmark. They are not evidence from
+          a laboratory and were unavailable to planners during the campaign.
+        </p>
+        <pre id="replay-identity"></pre>
+      </div>
+    </section>
+
+    <aside class="boundary" aria-labelledby="boundary-heading">
+      <h2 id="boundary-heading">What this does not prove</h2>
+      <p>
+        Performance in this teaching emulator does not establish real-laboratory capability,
+        mechanistic understanding, or transfer to real electrochemistry. The demo calls no LLM and
+        controls no instrument.
+      </p>
+    </aside>
+  </main>
+
+  <footer class="site-footer">
+    <div class="shell">
+      Independent research prototype. Artifact replay only; no affiliation or institutional
+      endorsement is implied.
+    </div>
+  </footer>
+</body>
+</html>
