@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import mimetypes
 import sys
@@ -27,7 +28,13 @@ STATIC_ROUTES = {
     "/styles.css": DEMO_DIR / "styles.css",
     "/app.js": DEMO_DIR / "app.js",
     "/real-cv-data.json": DEMO_DIR / "data" / "all_iron_rfb_cv.json",
+    "/tempo/": DEMO_DIR / "tempo.html",
+    "/tempo.js": DEMO_DIR / "tempo.js",
+    "/tempo.css": DEMO_DIR / "tempo.css",
 }
+TEMPO_REFERENCE_PATH = DEMO_DIR / "data" / "tempo" / "reference-v1.json"
+TEMPO_REFERENCE_ROUTE = "/tempo/reference-v1.json"
+MAX_TEMPO_REQUEST_BYTES = 2_000_000
 REQUIRED_ARTIFACTS = (
     "manifest.json",
     "summary.json",
@@ -48,6 +55,36 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
     def do_HEAD(self) -> None:  # noqa: N802 - stdlib handler API
         self._serve(send_body=False)
 
+    def do_POST(self) -> None:  # noqa: N802 - stdlib handler API
+        path = urlsplit(self.path).path
+        if path not in {"/api/tempo/analyze", "/api/tempo/conductivity"}:
+            self.send_error(HTTPStatus.NOT_FOUND, "Not found")
+            return
+        try:
+            payload, transport_input_hash = self._read_json_request()
+        except ValueError as exc:
+            self._send_json({"status": "no_estimate", "error": str(exc)}, HTTPStatus.BAD_REQUEST)
+            return
+        from discovery_flight_simulator.tempo import (
+            TempoError,
+            analyze_cv_request,
+            calculate_conductivity,
+        )
+        try:
+            if path == "/api/tempo/analyze":
+                result = analyze_cv_request(payload, transport_input_hash=transport_input_hash)
+            else:
+                result = calculate_conductivity(payload, transport_input_hash=transport_input_hash)
+        except TempoError as exc:
+            status = (
+                HTTPStatus.CONFLICT
+                if exc.code == "SOURCE_INTEGRITY_FAILED"
+                else HTTPStatus.UNPROCESSABLE_ENTITY
+            )
+            self._send_json(exc.response(payload.get("request_id")), status)
+            return
+        self._send_json(result, HTTPStatus.OK)
+
     def _serve(self, *, send_body: bool) -> None:
         raw_path = urlsplit(self.path).path
         try:
@@ -57,6 +94,19 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
             return
         if "\x00" in path:
             self.send_error(HTTPStatus.BAD_REQUEST, "Invalid path")
+            return
+
+        if path == TEMPO_REFERENCE_ROUTE:
+            try:
+                payload = load_tempo_reference()
+            except ValueError as exc:
+                self._send_json(
+                    {"status": "no_estimate", "code": "SOURCE_INTEGRITY_FAILED", "message": str(exc)},
+                    HTTPStatus.CONFLICT,
+                    send_body=send_body,
+                )
+                return
+            self._send_json(payload, HTTPStatus.OK, send_body=send_body)
             return
 
         static_file = STATIC_ROUTES.get(path)
@@ -84,6 +134,48 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
 
         self.send_error(HTTPStatus.NOT_FOUND, "Not found")
 
+    def _read_json_request(self) -> tuple[dict[str, object], str]:
+        content_type = self.headers.get_content_type()
+        if content_type != "application/json":
+            raise ValueError("Content-Type must be application/json")
+        raw_length = self.headers.get("Content-Length")
+        try:
+            length = int(raw_length or "")
+        except ValueError as exc:
+            raise ValueError("valid Content-Length is required") from exc
+        if length <= 0 or length > MAX_TEMPO_REQUEST_BYTES:
+            raise ValueError("request body size is invalid")
+        raw_body = self.rfile.read(length)
+        try:
+            payload = json.loads(raw_body.decode("utf-8"))
+        except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+            raise ValueError("request body must be valid UTF-8 JSON") from exc
+        if not isinstance(payload, dict):
+            raise ValueError("request body must be a JSON object")
+        transport_input_hash = hashlib.sha256(raw_body).hexdigest()
+        claimed_hash = self.headers.get("X-Tempo-Input-Hash")
+        if claimed_hash is not None and claimed_hash != transport_input_hash:
+            raise ValueError("X-Tempo-Input-Hash does not match the exact UTF-8 request body")
+        return payload, transport_input_hash
+
+    def _send_json(
+        self,
+        payload: dict[str, object],
+        status: HTTPStatus,
+        *,
+        send_body: bool = True,
+    ) -> None:
+        body = (json.dumps(payload, sort_keys=True, separators=(",", ":")) + "\n").encode("utf-8")
+        self.send_response(status)
+        self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.send_header("Content-Length", str(len(body)))
+        self.send_header("Cache-Control", "no-store")
+        self.send_header("X-Content-Type-Options", "nosniff")
+        self.send_header("Referrer-Policy", "no-referrer")
+        self.end_headers()
+        if send_body:
+            self.wfile.write(body)
+
     def _send_file(self, path: Path, *, send_body: bool) -> None:
         try:
             payload = path.read_bytes()
@@ -110,6 +202,33 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
 
     def log_message(self, format: str, *args: object) -> None:
         print(f"{self.address_string()} - {format % args}")
+
+
+def load_tempo_reference() -> dict[str, object]:
+    """Return the curated atlas only when its local deterministic-record checksum matches."""
+
+    try:
+        payload = json.loads(TEMPO_REFERENCE_PATH.read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+        raise ValueError(f"cannot read TEMPO reference: {exc}") from exc
+    if not isinstance(payload, dict) or payload.get("schema_version") != "tempo-reference-v1":
+        raise ValueError("TEMPO reference schema mismatch")
+    supplied = payload.get("record_checksum")
+    unhashed = {key: value for key, value in payload.items() if key != "record_checksum"}
+    canonical = json.dumps(unhashed, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+    expected = "sha256:" + hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+    if supplied != expected:
+        raise ValueError("TEMPO reference checksum mismatch")
+    samples = payload.get("samples")
+    if not isinstance(samples, list) or [item.get("sample_id") for item in samples] != [
+        "4ht",
+        "4ot",
+        "4at",
+        "4cyt",
+        "4cat",
+    ]:
+        raise ValueError("TEMPO reference sample inventory mismatch")
+    return payload
 
 
 def validate_artifact_root(path: Path) -> Path:

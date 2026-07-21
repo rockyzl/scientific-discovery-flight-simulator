@@ -1,0 +1,119 @@
+{
+  "schema_version": "tempo-reference-v1",
+  "dataset_id": "zhou-2020-tempo-table-1-v1",
+  "title": "Five TEMPO derivatives: reported scalar properties",
+  "citation": "W. Zhou et al., RSC Advances 10 (2020) 21839",
+  "doi": "10.1039/D0RA03424J",
+  "article_url": "https://pubs.rsc.org/en/content/articlehtml/2020/ra/d0ra03424j",
+  "supporting_information_url": "https://www.rsc.org/suppdata/d0/ra/d0ra03424j/d0ra03424j1.pdf",
+  "license_id": "CC-BY-NC-3.0",
+  "license_url": "https://creativecommons.org/licenses/by-nc/3.0/",
+  "reuse_note": "Curated scalar transcription for attributed reference; publisher curves are not included.",
+  "retrieved_at": "2026-07-21",
+  "builder_version": "tempo-reference-builder-v1",
+  "record_checksum": "sha256:33be843c8e6ad517d9b7acf963254e6cc04d64fa373e66cadca24990ca4b81fa",
+  "conditions": [
+    {
+      "condition_id": "formal-potential-direct-cv",
+      "method_id": "cv-midpoint-source-report",
+      "summary": "1 mM analyte; 0.5 M KCl; pH 7; 25 C; 25 mV/s; 5 mm glassy-carbon RDE; Pt foil counter; SCE reference; potentials reported vs SHE; nitrogen purge"
+    },
+    {
+      "condition_id": "diffusion-multi-rate-cv",
+      "method_id": "randles-sevcik-source-report",
+      "summary": "1 mM analyte; 0.5 M KCl; room temperature; scan rates 5, 10, 25, 50, 100, and 200 mV/s; 5 mm glassy-carbon RDE; Pt foil counter; SCE reference; potentials reported vs SHE; nitrogen purge; pH not reported for this series"
+    },
+    {
+      "condition_id": "rate-constant-rde",
+      "method_id": "koutecky-levich-rde-source-report",
+      "summary": "1 mM analyte; 0.5 M KCl; room temperature; glassy-carbon RDE at 200-900 rpm; Pt foil counter; SCE reference; potentials reported vs SHE; nitrogen purge"
+    },
+    {
+      "condition_id": "solubility-water",
+      "method_id": "uv-vis-after-48h-equilibration",
+      "summary": "Pure water; excess sample equilibrated 48 h at room temperature; UV-visible concentration measurement"
+    },
+    {
+      "condition_id": "solubility-0.5m-kcl",
+      "method_id": "uv-vis-after-48h-equilibration",
+      "summary": "0.5 M KCl; excess sample equilibrated 48 h at room temperature; UV-visible concentration measurement"
+    },
+    {
+      "condition_id": "capacity-from-kcl-solubility",
+      "method_id": "theoretical-capacity-source-report",
+      "summary": "Theoretical capacity calculated by the authors from solubility in 0.5 M KCl"
+    }
+  ],
+  "samples": [
+    {
+      "sample_id": "4ht",
+      "preferred_name": "4-hydroxy-TEMPO",
+      "provenance": "published_reported_scalar",
+      "source_table": "Table 1",
+      "quantities": {
+        "formal_potential_v_vs_she": {"value": 0.812, "unit": "V vs SHE", "status": "reported", "condition_id": "formal-potential-direct-cv", "method_id": "cv-midpoint-source-report"},
+        "diffusion_coefficient_cm2_s": {"value": 3.14e-6, "unit": "cm2/s", "status": "reported", "condition_id": "diffusion-multi-rate-cv", "method_id": "randles-sevcik-source-report"},
+        "electron_transfer_rate_constant_cm_s": {"value": 4.45e-3, "unit": "cm/s", "status": "reported", "condition_id": "rate-constant-rde", "method_id": "koutecky-levich-rde-source-report"},
+        "solubility_water_mol_l": {"value": 2.11, "unit": "mol/L", "status": "reported", "condition_id": "solubility-water", "method_id": "uv-vis-after-48h-equilibration"},
+        "solubility_kcl_mol_l": {"value": 1.25, "unit": "mol/L", "status": "reported", "condition_id": "solubility-0.5m-kcl", "method_id": "uv-vis-after-48h-equilibration"},
+        "theoretical_capacity_ah_l": {"value": 33.5, "unit": "Ah/L", "status": "reported", "condition_id": "capacity-from-kcl-solubility", "method_id": "theoretical-capacity-source-report"}
+      }
+    },
+    {
+      "sample_id": "4ot",
+      "preferred_name": "4-oxo-TEMPO",
+      "provenance": "published_reported_scalar",
+      "source_table": "Table 1",
+      "quantities": {
+        "formal_potential_v_vs_she": {"value": 0.910, "unit": "V vs SHE", "status": "reported", "condition_id": "formal-potential-direct-cv", "method_id": "cv-midpoint-source-report"},
+        "diffusion_coefficient_cm2_s": {"value": 4.61e-6, "unit": "cm2/s", "status": "reported", "condition_id": "diffusion-multi-rate-cv", "method_id": "randles-sevcik-source-report"},
+        "electron_transfer_rate_constant_cm_s": {"value": 1.05e-2, "unit": "cm/s", "status": "reported", "condition_id": "rate-constant-rde", "method_id": "koutecky-levich-rde-source-report"},
+        "solubility_water_mol_l": {"value": 1.22, "unit": "mol/L", "status": "reported", "condition_id": "solubility-water", "method_id": "uv-vis-after-48h-equilibration"},
+        "solubility_kcl_mol_l": {"value": 0.79, "unit": "mol/L", "status": "reported", "condition_id": "solubility-0.5m-kcl", "method_id": "uv-vis-after-48h-equilibration"},
+        "theoretical_capacity_ah_l": {"value": 21.2, "unit": "Ah/L", "status": "reported", "condition_id": "capacity-from-kcl-solubility", "method_id": "theoretical-capacity-source-report"}
+      }
+    },
+    {
+      "sample_id": "4at",
+      "preferred_name": "4-amino-TEMPO",
+      "provenance": "published_reported_scalar",
+      "source_table": "Table 1",
+      "quantities": {
+        "formal_potential_v_vs_she": {"value": 0.895, "unit": "V vs SHE", "status": "reported", "condition_id": "formal-potential-direct-cv", "method_id": "cv-midpoint-source-report"},
+        "diffusion_coefficient_cm2_s": {"value": 3.77e-6, "unit": "cm2/s", "status": "reported", "condition_id": "diffusion-multi-rate-cv", "method_id": "randles-sevcik-source-report"},
+        "electron_transfer_rate_constant_cm_s": {"value": 4.01e-3, "unit": "cm/s", "status": "reported", "condition_id": "rate-constant-rde", "method_id": "koutecky-levich-rde-source-report"},
+        "solubility_water_mol_l": {"value": 5.79, "unit": "mol/L", "status": "reported", "condition_id": "solubility-water", "method_id": "uv-vis-after-48h-equilibration"},
+        "solubility_kcl_mol_l": {"value": 4.80, "unit": "mol/L", "status": "reported", "condition_id": "solubility-0.5m-kcl", "method_id": "uv-vis-after-48h-equilibration"},
+        "theoretical_capacity_ah_l": {"value": 128.6, "unit": "Ah/L", "status": "reported", "condition_id": "capacity-from-kcl-solubility", "method_id": "theoretical-capacity-source-report"}
+      }
+    },
+    {
+      "sample_id": "4cyt",
+      "preferred_name": "4-cyano-TEMPO",
+      "provenance": "published_reported_scalar",
+      "source_table": "Table 1",
+      "quantities": {
+        "formal_potential_v_vs_she": {"value": 0.881, "unit": "V vs SHE", "status": "reported", "condition_id": "formal-potential-direct-cv", "method_id": "cv-midpoint-source-report"},
+        "diffusion_coefficient_cm2_s": {"value": 6.23e-6, "unit": "cm2/s", "status": "reported", "condition_id": "diffusion-multi-rate-cv", "method_id": "randles-sevcik-source-report"},
+        "electron_transfer_rate_constant_cm_s": {"value": 4.29e-3, "unit": "cm/s", "status": "reported", "condition_id": "rate-constant-rde", "method_id": "koutecky-levich-rde-source-report"},
+        "solubility_water_mol_l": {"value": 2.6e-2, "unit": "mol/L", "status": "reported", "condition_id": "solubility-water", "method_id": "uv-vis-after-48h-equilibration"},
+        "solubility_kcl_mol_l": {"value": null, "unit": "mol/L", "status": "not_reported", "condition_id": "solubility-0.5m-kcl", "method_id": "uv-vis-after-48h-equilibration"},
+        "theoretical_capacity_ah_l": {"value": null, "unit": "Ah/L", "status": "not_reported", "condition_id": "capacity-from-kcl-solubility", "method_id": "theoretical-capacity-source-report"}
+      }
+    },
+    {
+      "sample_id": "4cat",
+      "preferred_name": "4-carboxy-TEMPO",
+      "provenance": "published_reported_scalar",
+      "source_table": "Table 1",
+      "quantities": {
+        "formal_potential_v_vs_she": {"value": 0.776, "unit": "V vs SHE", "status": "reported", "condition_id": "formal-potential-direct-cv", "method_id": "cv-midpoint-source-report"},
+        "diffusion_coefficient_cm2_s": {"value": 2.64e-6, "unit": "cm2/s", "status": "reported", "condition_id": "diffusion-multi-rate-cv", "method_id": "randles-sevcik-source-report"},
+        "electron_transfer_rate_constant_cm_s": {"value": 2.25e-3, "unit": "cm/s", "status": "reported", "condition_id": "rate-constant-rde", "method_id": "koutecky-levich-rde-source-report"},
+        "solubility_water_mol_l": {"value": 2.1e-2, "unit": "mol/L", "status": "reported", "condition_id": "solubility-water", "method_id": "uv-vis-after-48h-equilibration"},
+        "solubility_kcl_mol_l": {"value": null, "unit": "mol/L", "status": "not_reported", "condition_id": "solubility-0.5m-kcl", "method_id": "uv-vis-after-48h-equilibration"},
+        "theoretical_capacity_ah_l": {"value": null, "unit": "Ah/L", "status": "not_reported", "condition_id": "capacity-from-kcl-solubility", "method_id": "theoretical-capacity-source-report"}
+      }
+    }
+  ]
+}

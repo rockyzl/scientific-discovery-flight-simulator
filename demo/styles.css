@@ -98,6 +98,17 @@ summary { min-height: 44px; }
   color: var(--ink-soft);
   font-size: 0.94rem;
 }
+.tempo-study-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 8px 11px;
+  border: 1px solid var(--real);
+  border-radius: 9px;
+  background: var(--real-soft);
+  font: 700 0.72rem var(--mono);
+  text-decoration: none;
+}
 
 .first-planner-preview {
   display: flex;

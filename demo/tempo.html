@@ -1,0 +1,335 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Study reported TEMPO-family properties, then analyze an explicitly synthetic six-scan-rate CV teaching series with evidence gates.">
+  <title>TEMPO multi-sample CV evidence study</title>
+  <link rel="stylesheet" href="/tempo.css">
+  <script src="/tempo.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to the TEMPO evidence study</a>
+
+  <header class="page-header">
+    <div class="shell header-row">
+      <div>
+        <p class="eyebrow">Scientific Discovery Flight Simulator · study workbench</p>
+        <h1>TEMPO multi-sample CV evidence study</h1>
+        <p class="lede">Compare reported values, then test what six reviewed peak assignments can—and cannot—support. This page is not a live measurement instrument.</p>
+      </div>
+      <a class="back-link" href="/">← How a CV experiment becomes evidence</a>
+    </div>
+
+    <div class="shell provenance-key" aria-label="Evidence types used on this page">
+      <span class="badge published">◆ PUBLISHED REPORTED VALUE</span>
+      <span class="badge synthetic">◇ SYNTHETIC TEACHING DATA · NOT A LAB MEASUREMENT</span>
+      <span class="badge derived">ƒ DERIVED FROM SELECTED DATA</span>
+    </div>
+  </header>
+
+  <nav class="section-rail" aria-label="TEMPO study sections">
+    <a href="#study-map">Study map</a>
+    <a href="#published-atlas">Published atlas</a>
+    <a href="#synthetic-workbench">Synthetic workbench</a>
+    <a href="#conductivity">Independent conductivity</a>
+  </nav>
+
+  <main id="main" class="shell" tabindex="-1">
+    <section id="study-map" class="study-map" aria-labelledby="study-map-heading">
+      <div class="map-heading">
+        <p class="section-number">ONE-GLANCE STUDY MAP</p>
+        <h2 id="study-map-heading">Evidence first; estimate only when the gate passes</h2>
+      </div>
+
+      <div class="cartoon-chain" aria-label="TEMPO CV analysis sequence">
+        <div class="chain-node sample-node">
+          <span class="node-icon" aria-hidden="true">⚗</span>
+          <b>Choose samples</b>
+          <small>5 named TEMPO derivatives</small>
+        </div>
+        <span class="chain-arrow" aria-hidden="true">→</span>
+        <div class="chain-node rates-node">
+          <span class="rate-dots" aria-hidden="true"><i>5</i><i>10</i><i>25</i><i>50</i><i>100</i><i>200</i></span>
+          <b>Six scan rates</b>
+          <small>mV s⁻¹ · synthetic/manual only</small>
+        </div>
+        <span class="chain-arrow" aria-hidden="true">→</span>
+        <div class="chain-node peak-node">
+          <span class="node-icon" aria-hidden="true">⌁</span>
+          <b>Review peaks</b>
+          <small>Epa · Epc · ipa · ipc</small>
+        </div>
+        <span class="chain-arrow" aria-hidden="true">→</span>
+        <div class="chain-node result-node">
+          <span class="node-icon" aria-hidden="true">ƒ</span>
+          <b>Evidence descriptors</b>
+          <small>E1/2 · D · ΔEp · current ratio</small>
+        </div>
+        <span class="chain-arrow" aria-hidden="true">→</span>
+        <div class="chain-node ir-node">
+          <span class="node-icon" aria-hidden="true">↔</span>
+          <b>Optional iR preview</b>
+          <small>eligible independent Ru only</small>
+        </div>
+      </div>
+
+      <div class="conductivity-map" aria-label="Conductivity follows a separate evidence path">
+        <span class="branch-label">SEPARATE MEASUREMENT PATH</span>
+        <span>independent resistance</span><b>+</b><span>calibrated cell constant</span><span aria-hidden="true">→</span><strong>conductivity</strong>
+        <small>Never inferred from ordinary CV or reused from unrelated CV geometry.</small>
+      </div>
+    </section>
+
+    <section id="published-atlas" class="panel atlas-panel" aria-labelledby="atlas-heading">
+      <div class="section-heading">
+        <div>
+          <p class="section-number">01 · PUBLISHED SCALAR ATLAS</p>
+          <h2 id="atlas-heading">Five Zhou TEMPO derivatives under named methods and conditions</h2>
+        </div>
+        <span class="badge published">◆ PUBLISHED REPORTED VALUE</span>
+      </div>
+
+      <p class="section-intro">These are attributed Table 1 scalar values—not embedded, digitized, or reconstructed CV curves. A value is not a condition-independent molecular constant.</p>
+
+      <div class="source-card">
+        <div>
+          <b>Zhou et al., RSC Advances (2020)</b>
+          <span>DOI 10.1039/D0RA03424J · Table 1 · CC BY-NC 3.0</span>
+        </div>
+        <nav aria-label="Zhou source links">
+          <a href="https://pubs.rsc.org/en/content/articlehtml/2020/ra/d0ra03424j" target="_blank" rel="noreferrer">Article</a>
+          <a href="https://doi.org/10.1039/D0RA03424J" target="_blank" rel="noreferrer">DOI</a>
+          <a href="https://www.rsc.org/suppdata/d0/ra/d0ra03424j/d0ra03424j1.pdf" target="_blank" rel="noreferrer">Supporting information</a>
+          <a href="https://creativecommons.org/licenses/by-nc/3.0/" target="_blank" rel="noreferrer">Licence</a>
+        </nav>
+      </div>
+
+      <div class="condition-strip" aria-label="Published atlas condition notes">
+        <div><b>Formal potential</b><span>1 mM analyte · 0.5 M KCl · pH 7 · 25 °C · 25 mV s⁻¹ · reported vs SHE</span></div>
+        <div><b>Mean D</b><span>5–200 mV s⁻¹ · Randles–Sevcik · pH not reported for this condition</span></div>
+        <div><b>k0</b><span>RDE · Koutecký–Levich/kinetic method, not inferred here from ordinary CV</span></div>
+        <div><b>Solubility</b><span>UV-visible after 48 h equilibration · medium stays attached</span></div>
+      </div>
+
+      <p id="atlas-status" class="load-status" role="status">Validating the immutable five-sample reference record…</p>
+      <div id="atlas-error" class="error-card" role="alert" hidden>
+        <b>DATASET UNAVAILABLE</b>
+        <p>The published reference record could not be verified. No substitute values or synthetic curves are shown.</p>
+      </div>
+
+      <div id="atlas-content" hidden>
+        <fieldset class="atlas-selector">
+          <legend>Choose samples for a no-ranking comparison</legend>
+          <p>Select one or more reported records. Missing values stay visible as <b>not reported</b>, never zero.</p>
+          <div id="sample-cards" class="sample-cards"></div>
+        </fieldset>
+
+        <div class="table-scroll" tabindex="0" role="region" aria-label="Scrollable Zhou reported-value comparison table">
+          <table>
+            <caption>Reported values from Zhou et al. Table 1; no overall rank is calculated.</caption>
+            <thead>
+              <tr>
+                <th scope="col">Include</th>
+                <th scope="col">Sample</th>
+                <th scope="col">Reported E0 / V vs SHE</th>
+                <th scope="col">Mean D / cm² s⁻¹</th>
+                <th scope="col">Reported k0 / cm s⁻¹</th>
+                <th scope="col">Water solubility / M</th>
+                <th scope="col">0.5 M KCl solubility / M</th>
+                <th scope="col">Theoretical capacity / Ah L⁻¹</th>
+              </tr>
+            </thead>
+            <tbody id="atlas-table-body"></tbody>
+          </table>
+        </div>
+
+        <div id="atlas-selection-summary" class="selection-summary" role="status" aria-live="polite"></div>
+        <p class="license-note"><b>Reuse boundary:</b> this page links to the paper and SI and displays attributed scalar facts. It does not redistribute the supporting-information CV figures or arrays. Supporting Figure S2 contains 5, 10, 25, 50, 100, and 200 mV s⁻¹ curves, but author-supplied raw x-y arrays are not available to this project.</p>
+      </div>
+    </section>
+
+    <div class="world-boundary" role="separator" aria-labelledby="boundary-heading">
+      <p class="section-number">PUBLISHED SCALAR CONTEXT ENDS HERE</p>
+      <h2 id="boundary-heading">The interactive workbench below is a separate synthetic teaching exercise</h2>
+      <p>Zhou values do not generate, fit, calibrate, or validate the sketch or editable peak table below.</p>
+    </div>
+
+    <section id="synthetic-workbench" class="panel synthetic-panel" aria-labelledby="synthetic-heading">
+      <div class="section-heading">
+        <div>
+          <p class="section-number">02 · SIX-RATE TEACHING INPUT</p>
+          <h2 id="synthetic-heading">Edit reviewed peak assignments, then ask the API what they support</h2>
+        </div>
+        <span class="badge synthetic">◇ SYNTHETIC TEACHING DATA · NOT A LAB MEASUREMENT</span>
+      </div>
+
+      <p class="synthetic-banner">◇ SYNTHETIC TEACHING DATA · NOT A LAB MEASUREMENT · editable teaching fixture · not Zhou data</p>
+
+      <div class="workbench-grid">
+        <form id="analysis-form" novalidate>
+          <fieldset class="metadata-fieldset">
+            <legend>Fixed teaching-fixture metadata</legend>
+            <div class="metadata-grid">
+              <label>Sample name<input id="sample-name" name="sample_name" value="TEMPO teaching sample A" required></label>
+              <label>Molecular form<input id="molecular-form" name="molecular_form" value="neutral nitroxide teaching fixture" required></label>
+              <label>Concentration / mol cm⁻³<input id="concentration" name="concentration_mol_cm3" type="number" value="0.000001" min="0" step="any" required></label>
+              <label>Temperature / K<input id="temperature" name="temperature_K" type="number" value="298.15" step="0.01" required></label>
+              <label>Working-electrode area / cm²<input id="electrode-area" name="working_electrode_area_cm2" type="number" value="0.19634954084936207" min="0" step="any" required></label>
+              <label>Electron count<input id="electron-count" name="electron_count" type="number" value="1" min="0" step="1" required></label>
+            </div>
+            <details>
+              <summary>Show full condition record</summary>
+              <dl class="condition-record">
+                <div><dt>Solvent</dt><dd>water</dd></div>
+                <div><dt>Supporting electrolyte</dt><dd>0.5 mol L⁻¹ KCl</dd></div>
+                <div><dt>pH</dt><dd>7 · synthetic fixture</dd></div>
+                <div><dt>Working electrode</dt><dd>glassy carbon · 0.19634954084936207 cm²</dd></div>
+                <div><dt>Counter electrode</dt><dd>Pt foil</dd></div>
+                <div><dt>Reference / scale</dt><dd>SCE · potential reported vs SHE</dd></div>
+                <div><dt>Atmosphere</dt><dd>N₂ teaching context</dd></div>
+                <div><dt>Preprocessing</dt><dd>none · synthetic fixture</dd></div>
+              </dl>
+            </details>
+          </fieldset>
+
+          <fieldset class="peak-fieldset">
+            <legend>Reviewed manual peak assignments</legend>
+            <p>Six editable rows are sent as reviewed <b>manual</b> assignments. No automatic peak picking occurs.</p>
+            <div class="table-scroll" tabindex="0" role="region" aria-label="Scrollable six-rate peak assignment table">
+              <table id="peak-table">
+                <caption>◇ SYNTHETIC TEACHING DATA · NOT A LAB MEASUREMENT. Currents use mA here and are explicitly converted to A in the request.</caption>
+                <thead><tr><th scope="col">Rate / mV s⁻¹</th><th scope="col">Epa / V</th><th scope="col">Epc / V</th><th scope="col">ipa / mA</th><th scope="col">ipc / mA</th><th scope="col">Reviewed</th></tr></thead>
+                <tbody>
+                  <tr data-rate="5"><th scope="row">5</th><td><input type="number" step="0.001" value="0.842" aria-label="5 mV per second anodic peak potential in volts"></td><td><input type="number" step="0.001" value="0.782" aria-label="5 mV per second cathodic peak potential in volts"></td><td><input type="number" step="any" value="0.006618079750015135" aria-label="5 mV per second anodic peak current in milliamps"></td><td><input type="number" step="any" value="-0.006485718155014832" aria-label="5 mV per second cathodic peak current in milliamps"></td><td><input type="checkbox" checked aria-label="5 mV per second peak assignment reviewed"></td></tr>
+                  <tr data-rate="10"><th scope="row">10</th><td><input type="number" step="0.001" value="0.843" aria-label="10 mV per second anodic peak potential in volts"></td><td><input type="number" step="0.001" value="0.781" aria-label="10 mV per second cathodic peak potential in volts"></td><td><input type="number" step="any" value="0.009359378139338148" aria-label="10 mV per second anodic peak current in milliamps"></td><td><input type="number" step="any" value="-0.009172190576551385" aria-label="10 mV per second cathodic peak current in milliamps"></td><td><input type="checkbox" checked aria-label="10 mV per second peak assignment reviewed"></td></tr>
+                  <tr data-rate="25"><th scope="row">25</th><td><input type="number" step="0.001" value="0.844" aria-label="25 mV per second anodic peak potential in volts"></td><td><input type="number" step="0.001" value="0.780" aria-label="25 mV per second cathodic peak potential in volts"></td><td><input type="number" step="any" value="0.01479847620154866" aria-label="25 mV per second anodic peak current in milliamps"></td><td><input type="number" step="any" value="-0.014502506677517687" aria-label="25 mV per second cathodic peak current in milliamps"></td><td><input type="checkbox" checked aria-label="25 mV per second peak assignment reviewed"></td></tr>
+                  <tr data-rate="50"><th scope="row">50</th><td><input type="number" step="0.001" value="0.845" aria-label="50 mV per second anodic peak potential in volts"></td><td><input type="number" step="0.001" value="0.779" aria-label="50 mV per second cathodic peak potential in volts"></td><td><input type="number" step="any" value="0.020928205746685605" aria-label="50 mV per second anodic peak current in milliamps"></td><td><input type="number" step="any" value="-0.020509641631751893" aria-label="50 mV per second cathodic peak current in milliamps"></td><td><input type="checkbox" checked aria-label="50 mV per second peak assignment reviewed"></td></tr>
+                  <tr data-rate="100"><th scope="row">100</th><td><input type="number" step="0.001" value="0.846" aria-label="100 mV per second anodic peak potential in volts"></td><td><input type="number" step="0.001" value="0.778" aria-label="100 mV per second cathodic peak potential in volts"></td><td><input type="number" step="any" value="0.02959695240309732" aria-label="100 mV per second anodic peak current in milliamps"></td><td><input type="number" step="any" value="-0.029005013355035373" aria-label="100 mV per second cathodic peak current in milliamps"></td><td><input type="checkbox" checked aria-label="100 mV per second peak assignment reviewed"></td></tr>
+                  <tr data-rate="200"><th scope="row">200</th><td><input type="number" step="0.001" value="0.847" aria-label="200 mV per second anodic peak potential in volts"></td><td><input type="number" step="0.001" value="0.777" aria-label="200 mV per second cathodic peak potential in volts"></td><td><input type="number" step="any" value="0.0418564114933712" aria-label="200 mV per second anodic peak current in milliamps"></td><td><input type="number" step="any" value="-0.041019283263503775" aria-label="200 mV per second cathodic peak current in milliamps"></td><td><input type="checkbox" checked aria-label="200 mV per second peak assignment reviewed"></td></tr>
+                </tbody>
+              </table>
+            </div>
+          </fieldset>
+
+          <fieldset class="request-fieldset">
+            <legend>Requested calculations</legend>
+            <label><input type="checkbox" name="requested" value="peak_descriptors" checked> Peak descriptors and reversibility evidence</label>
+            <label><input type="checkbox" name="requested" value="diffusion" checked> Randles–Sevcik diffusion estimate</label>
+            <label><input id="request-ir" type="checkbox" name="requested" value="ir_correction"> Optional pointwise iR preview</label>
+          </fieldset>
+
+          <fieldset id="ir-fields" class="ir-fieldset" disabled>
+            <legend>Optional iR input · independent Ru required</legend>
+            <p>Do not use a value guessed or fitted from this ordinary CV. Load the synthetic teaching record or enter your own auditable IDs. Loading it does not mark the record reviewed.</p>
+            <button id="load-ir-teaching-record" class="secondary-button record-preset" type="button">Load structured teaching record</button>
+            <div class="metadata-grid">
+              <label>Uncompensated resistance Ru / Ω<input id="ru-ohm" type="number" min="0" step="any"></label>
+              <label>Correction fraction / 0–1<input id="ir-fraction" type="number" min="0" max="1" step="0.01"></label>
+              <label>Resistance operation ID<input id="resistance-operation-id" placeholder="operation-eis-17"></label>
+              <label>Measurement method<select id="resistance-method"><option value="">Choose a method</option><option value="EIS high-frequency resistance">EIS high-frequency resistance</option><option value="current interruption">Current interruption</option></select></label>
+              <label>Cell ID<input id="ir-cell-id" placeholder="cell-tempo-01"></label>
+              <label>Geometry ID<input id="ir-geometry-id" placeholder="geometry-gce-5mm"></label>
+              <label>Electrolyte ID<input id="ir-electrolyte-id" placeholder="electrolyte-kcl-05m"></label>
+            </div>
+            <p class="fixed-record">The matching CV record uses sample <code>tempo-teaching-a</code> and condition <code>synthetic-tempo-kcl-298k-v1</code>.</p>
+            <label class="review-confirmation"><input id="ir-record-reviewed" type="checkbox"> I reviewed this record and confirm Ru was measured independently for the same sample, cell, geometry, electrolyte, and condition.</label>
+          </fieldset>
+
+          <div class="form-actions">
+            <button class="primary-button" type="submit">Analyze reviewed teaching inputs</button>
+            <button id="reset-analysis" class="secondary-button" type="reset">Reset inputs</button>
+          </div>
+        </form>
+
+        <aside class="sketch-card">
+          <div class="sketch-label">◇ SYNTHETIC TEACHING DATA · NOT A LAB MEASUREMENT</div>
+          <svg viewBox="0 0 520 300" role="img" aria-labelledby="sketch-title sketch-desc">
+            <title id="sketch-title">Illustrative cyclic voltammogram sketch</title>
+            <desc id="sketch-desc">A schematic loop drawn only to explain anodic and cathodic peak labels. It is not measured data, not Zhou data, and is not submitted to the analysis API.</desc>
+            <line class="axis" x1="55" y1="250" x2="485" y2="250"></line>
+            <line class="axis" x1="55" y1="30" x2="55" y2="270"></line>
+            <path class="sketch-loop" d="M75 180 C135 175 195 170 245 145 C290 120 300 55 336 58 C374 61 374 120 340 145 C300 175 235 190 168 196 C130 200 110 212 128 225 C160 246 230 216 278 180 C322 147 350 198 318 211 C260 238 160 213 75 180"></path>
+            <circle cx="336" cy="58" r="6"></circle><text x="346" y="52">Epa / ipa</text>
+            <circle cx="128" cy="225" r="6"></circle><text x="138" y="242">Epc / ipc</text>
+            <text x="245" y="285">potential</text><text transform="translate(18 175) rotate(-90)">current</text>
+          </svg>
+          <p><b>Illustrative sketch only.</b> It is not a trace, not a fit, and not used as measured data. The API receives the six reviewed table rows and deterministic synthetic schema fixtures.</p>
+          <details>
+            <summary>Accessible sketch explanation</summary>
+            <p>An anodic peak has positive current at Epa; a cathodic peak has negative current at Epc. The editable table—not this drawing—provides the reviewed assignments.</p>
+          </details>
+        </aside>
+      </div>
+
+      <p id="analysis-live" class="sr-only" role="status" aria-live="polite"></p>
+      <div id="analysis-error" class="error-card" role="alert" hidden></div>
+
+      <section class="result-region" aria-labelledby="result-heading">
+        <div class="result-heading-row">
+          <div><p class="section-number">API RESULT</p><h3 id="result-heading">What the selected evidence supports</h3></div>
+          <span class="badge derived">ƒ DERIVED FROM SELECTED DATA</span>
+        </div>
+        <div id="result-cards" class="result-cards">
+          <article class="result-card no-estimate"><b>— NO ESTIMATE</b><h4>Apparent midpoint potential (E1/2)</h4><p>Submit reviewed peak assignments. No value is calculated in the browser.</p></article>
+          <article class="result-card no-estimate"><b>— NO ESTIMATE</b><h4>Diffusion coefficient</h4><p>Requires eligible metadata and at least three distinct reviewed scan rates.</p></article>
+          <article class="result-card partial"><b>INCONCLUSIVE</b><h4>Reversibility evidence</h4><p>No hard reversible, quasi-reversible, or irreversible class is emitted.</p></article>
+          <article class="result-card no-estimate"><b>— NO ESTIMATE</b><h4>iR-corrected view</h4><p>Requires a positive independently measured Ru with matching source, method, context, and fraction.</p></article>
+        </div>
+        <details id="analysis-audit" class="audit-details">
+          <summary>Audit this analysis · exact request, response, warnings, limitations, and hashes</summary>
+          <div class="audit-grid"><div><h4>Request</h4><pre id="request-audit">No request sent.</pre></div><div><h4>Response</h4><pre id="response-audit">No response received.</pre></div></div>
+        </details>
+      </section>
+    </section>
+
+    <section id="conductivity" class="panel conductivity-panel" aria-labelledby="conductivity-heading">
+      <div class="section-heading">
+        <div>
+          <p class="section-number">03 · INDEPENDENT MEASUREMENT PATH</p>
+          <h2 id="conductivity-heading">Conductivity from resistance and a calibrated cell constant</h2>
+        </div>
+        <span class="badge independent">SEPARATE FROM CV</span>
+      </div>
+      <p class="section-intro">The only v1 equation is κ = Kcell / R. A normal CV, CV-fitted Ru, or resistance from unrelated geometry is ineligible.</p>
+
+      <form id="conductivity-form" novalidate>
+        <p class="teaching-record-note"><b>Structured record required.</b> The teaching preset is synthetic and is not a laboratory measurement. Loading it never checks the review confirmations for you.</p>
+        <button id="load-conductivity-teaching-record" class="secondary-button record-preset" type="button">Load structured teaching record</button>
+        <div class="conductivity-form">
+          <label>Independent resistance / Ω<input id="conductivity-resistance" name="resistance_ohm" type="number" min="0" step="any" required></label>
+          <label>Calibrated cell constant / m⁻¹<input id="cell-constant" name="cell_constant_m_inv" type="number" min="0" step="any" required></label>
+          <label>Temperature / K<input id="conductivity-temperature" name="temperature_K" type="number" step="0.01" required></label>
+          <label>Calibration method<select id="calibration-method"><option value="">Choose a method</option><option value="certified_cell_constant">Certified cell constant</option><option value="standard_solution_calibration">Standard-solution calibration</option></select></label>
+          <label>Calibration ID<input id="calibration-id" placeholder="calibration-kcl-2026-01" required></label>
+          <label>Resistance operation ID<input id="conductivity-operation-id" placeholder="resistance-operation-01" required></label>
+          <label>Sample ID<input id="conductivity-sample-id" placeholder="tempo-sample-01" required></label>
+          <label>Cell ID<input id="conductivity-cell-id" placeholder="conductivity-cell-01" required></label>
+          <label>Geometry ID<input id="conductivity-geometry-id" placeholder="conductivity-geometry-01" required></label>
+          <label>Condition ID<input id="conductivity-condition-id" placeholder="conductivity-condition-298k" required></label>
+        </div>
+        <div class="record-confirmations">
+          <label class="review-confirmation"><input id="calibration-record-reviewed" type="checkbox"> I reviewed the calibration record and confirm it applies to this cell and geometry.</label>
+          <label class="review-confirmation"><input id="conductivity-record-reviewed" type="checkbox"> I reviewed the resistance record and confirm it is an independent measurement for this same sample, cell, geometry, and condition.</label>
+        </div>
+        <button class="primary-button conductivity-button" type="submit">Calculate independent conductivity</button>
+      </form>
+
+      <p id="conductivity-live" class="sr-only" role="status" aria-live="polite"></p>
+      <div id="conductivity-result" class="conductivity-result no-estimate">
+        <b>— NO ESTIMATE</b>
+        <h3>Electrolyte conductivity</h3>
+        <p>Add an independently measured resistance, a calibrated cell constant for the same context, calibration source, and temperature. CV alone is not a conductivity measurement.</p>
+      </div>
+      <details class="audit-details"><summary>Audit conductivity request and response</summary><div class="audit-grid"><pre id="conductivity-request-audit">No request sent.</pre><pre id="conductivity-response-audit">No response received.</pre></div></details>
+    </section>
+
+    <aside class="limits">
+      <h2>Exact v1 limits</h2>
+      <p>No digitized Zhou curves, Tang ingestion, reference-scale conversion, automatic peak picking, k0 inference, hard reversibility class, sample ranking, CV-derived Ru, or CV-derived conductivity.</p>
+    </aside>
+  </main>
+
+  <footer><div class="shell">Independent research prototype · evidence study and synthetic/manual teaching inputs only</div></footer>
+</body>
+</html>
