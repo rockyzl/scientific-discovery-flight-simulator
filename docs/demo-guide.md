@@ -1,6 +1,9 @@
 # Demo guide
 
-## Start the demo
+This guide describes the implemented local cartoon-UI experience and how it should be read. The
+interface follows the frozen design contract and is currently awaiting final QA before release.
+
+## Start the local review demo
 
 First create a completed artifact directory with the CLI, then run:
 
@@ -8,52 +11,211 @@ First create a completed artifact directory with the CLI, then run:
 python demo/serve.py --artifacts outputs/cv-demo
 ```
 
-Open <http://127.0.0.1:8000>. Use `--host` and `--port` only on a trusted network; the server is a
-small local review server, not a production deployment.
+Open <http://127.0.0.1:8000>. Use `--host` and `--port` only on a trusted network. This is a small
+local review server, not a production deployment and not a connection to laboratory hardware.
 
-## What you are looking at
+## The page tells two separate stories
 
-The page intentionally contains two provenance layers. They are visually and textually separated:
+The cartoon has two provenance layers:
 
-- **Published experimental reference:** author-processed CV curves for named all-iron RFB anolytes.
-- **Synthetic benchmark:** the random, fixed-grid, and information-gain policy campaigns.
+- **Real context:** published, author-processed CV data from named all-iron redox-flow-battery
+  electrolyte formulations.
+- **Synthetic replay:** saved policy campaigns in a transparent teaching emulator.
 
-The experimental chart is contextual evidence, not benchmark input. The policies do not train on,
-fit, or select actions from those published curves.
+The real curves make the physical measurement understandable. They are not inputs to the synthetic
+benchmark. The planners do not fit, train, calibrate, validate, or choose actions from the published
+curves.
 
-1. **What is measured** names the sample, instrument, controlled input, measured output, and the
-   boundary between real and simulated data.
-2. **Real CV experiment** lets you change among named electrolyte formulations, view their published
-   current-density curves, and replay the physical rinse/load/equilibrate/sweep process.
-3. **Synthetic task** states the exact hidden-mechanism question and three response hypotheses.
-4. **Run identity** shows scenario commitment, completion status, versions, public planner seed, and
-   manifest identity. Private world/noise/failure seeds remain concealed before reveal.
-5. **Planner comparison** states each final mechanism and attempt count before the detailed metrics.
-6. **Policy replay** animates the chosen scan rate, simulated observation, and probability update,
-   while retaining the complete evidence-event cards below.
-7. **Downloads** link to the exact JSON artifacts currently displayed.
-8. **Hidden truth** is read only from `summary.json.post_run_reveal` and stays concealed until a
-   verified, complete artifact set has loaded. Revealing it shows the benchmark answer used by the
-   evaluator and private replay seeds, with an explicit synthetic-data warning—not a laboratory
-   truth.
+## What the physical experiment shows
 
-## How to compare planners
+Cyclic voltammetry uses a three-electrode cell connected to a potentiostat:
 
-Do not look only at whether a planner named the hidden mechanism. Also ask:
+- the **working electrode (WE)** is the electrode whose potential is controlled and where current
+  is measured;
+- the **reference electrode (RE)** supplies the potential reference and is not the main current
+  path; and
+- the **counter electrode (CE)** completes the main current circuit.
 
-- How many measurements and attempts did it use?
-- Did it propose invalid experiments?
-- Did it detect and recover from the injected failure?
-- Can its stopping decision be traced to successful observations?
-- Would a simpler policy be good enough under the same budget?
+The potentiostat sweeps working-electrode potential relative to the reference electrode and records
+the resulting current. The curve plots current density against potential. In the published example,
+the visible protocol is `0 → −1.2 → 0 V` at `10 mV/s`, with potential reported versus
+`Ag/AgCl/KCl (sat'd)` and total current density in `mA cm⁻²`.
 
-## Accessibility
+The physical scene is an explanatory cartoon, not a scale drawing. It does not establish exact
+volume, geometry, cleaning chemistry, temperature, purge procedure, equilibration time, electrode
+area, or iR compensation.
 
-All controls use native buttons or links and are keyboard accessible. Status is written as text and
-not encoded by color alone. Tables accompany compact visual summaries. The page respects reduced
-motion preferences. A live status region announces artifact loading and errors.
+## The seven physical-workflow steps
 
-## Troubleshooting
+The same cell, electrodes, potentiostat, sample tag, waveform, and chart stay in place while these
+seven states progress:
+
+1. **`1 · Select formulation`** — choose a named published formulation and display its exact
+   composition, pH, and source record. Selecting it does not yet perform a measurement.
+2. **`2 · Check sample change`** — compare the selected formulation with the formulation currently
+   loaded in the cell and choose the correct branch.
+3. **`3 · Remove and prepare`** — remove the prior electrolyte and perform generic,
+   protocol-defined preparation only when a different formulation was previously loaded.
+4. **`4 · Load and identify`** — load the selected formulation and attach its identity to the cell.
+   This is skipped when that formulation is already loaded.
+5. **`5 · Assemble and check cell`** — show WE, RE, CE, their potentiostat connections, and a
+   protocol-defined readiness/reference check without inventing a duration or threshold.
+6. **`6 · Sweep potential and record current`** — replay the forward and return potential sweep in
+   acquisition order while the waveform cursor and published CV cursor move together. The cycle
+   counter records two cycles.
+7. **`7 · Retain the published curve`** — show the authors' processed second-cycle curve with the
+   sample, protocol, axes, reference electrode, DOI, authors, and license.
+
+The second cycle is shown because that is the source dataset's documented analysis choice. It is
+not presented as a universal rule for cyclic voltammetry.
+
+## The three sample-change branches
+
+The cartoon must distinguish these cases because changing a scan setting is not the same as changing
+a physical formulation.
+
+### Fresh cell
+
+The cell begins as `EMPTY / FRESH START`. There is no previous sample to remove. Removal and rinse
+are marked `SKIPPED — NO PREVIOUS SAMPLE`; the selected formulation is then loaded and identified.
+
+### Same formulation already loaded
+
+The sample tag and liquid remain fixed. The UI says
+`SAME LOADED FORMULATION — CONDITION REPLAY` and
+`Same formulation → keep sample loaded`. Removal is `SKIPPED — SAME FORMULATION`, and loading is
+`SKIPPED — ALREADY LOADED`.
+
+This means the same formulation remains in the same cell; it does not claim an identical physical
+state over time. Repeated cycling, time, electrode conditioning, contamination, or degradation can
+matter.
+
+### Different formulation
+
+The UI shows `NEW FORMULATION — SAMPLE REPLACEMENT REQUIRED`. It stops the prior replay, marks the
+old sample as removed, shows generic protocol-defined preparation, and only then loads and identifies
+the new formulation. The new published curve becomes active after the new sample is loaded; it is
+not drawn as a mixture with the previous sample.
+
+The three published reference curves are different formulations measured at the reported
+`10 mV/s`. They are not a real multi-scan-rate experiment series.
+
+## What the published CV means
+
+The reference data come from Engler, Stich, Baumer, and Bund,
+*Supplement Data of Anolytes for All-Iron Redox-Flow Batteries*,
+<https://doi.org/10.5281/zenodo.15730784>, licensed CC BY 4.0.
+
+The visible curve contains published experimental points that the authors cleaned and smoothed. It
+must therefore be called **published, author-processed experimental data**, not raw data. The
+animation reveals saved points in acquisition order; it does not generate a measurement or rerun a
+potentiostat.
+
+## The hard boundary
+
+After the physical workflow, a permanent divider says `PHYSICAL CONTEXT ENDS HERE`.
+
+Above the divider are named formulations and published current-density curves. Below it is one
+unnamed virtual sample and unitless synthetic response. No arrow crosses this boundary, because no
+experimental curve is passed into the benchmark.
+
+The synthetic area remains labeled:
+
+> SYNTHETIC TEACHING EMULATOR · SAVED REPLAY · NOT A LAB MEASUREMENT
+
+## The five-state synthetic loop
+
+Each saved request is explained with the same five states:
+
+1. **`1 · SELECT RATE`** — a policy proposes a legal scan rate from `5–500 mV/s` and records why it
+   chose that rate.
+2. **`2 · VALIDATE REQUEST`** — a public range check accepts or blocks the request. A blocked request
+   consumes attempt cost but creates no observation.
+3. **`3 · EXECUTE VIRTUAL OPERATION`** — an accepted request returns one scalar, unitless normalized
+   response or a recorded synthetic failure/QC flag. It does not return a generated CV curve. A
+   failed executed operation consumes attempt and executed-operation cost but does not create a fake
+   zero-valued response.
+4. **`4 · UPDATE BELIEFS`** — a successful observation updates probabilities for three predefined
+   synthetic models: diffusion-like, surface-like, and mixed toy model.
+5. **`5 · CONTINUE OR STOP`** — the replay shows budget, confidence, and the recorded stop reason,
+   then either requests another virtual operation or freezes the completed lane.
+
+The response chart is `Normalized response vs scan rate — synthetic teaching model`; its vertical
+axis is `Unitless normalized response`. It is not experimental current density.
+
+## What the three planners mean
+
+All three planners receive the same public scenario contract and budgets. Each has a fresh
+environment replay and cannot see hidden truth or another planner's observations.
+
+- **Fixed Grid** follows a predetermined, regularly spaced scan-rate schedule.
+- **Information Gain** chooses a scan rate expected to distinguish the remaining predefined models
+  based on its current beliefs.
+- **Random** selects a legal scan rate from its isolated random stream.
+
+At a shared event position, each lane displays its own recorded event. A lane that has already
+stopped stays marked `STOPPED` while the others continue. These are three matched counterfactual
+campaigns, not three agents sharing or consuming one physical sample.
+
+Do not judge a planner only by whether its final label matches the hidden synthetic label. Also ask:
+
+- How many attempts and executed operations did it use?
+- Were any requests blocked?
+- Did it detect and respond to an injected failure?
+- Does its conclusion follow from successful observations?
+- What did it sacrifice to use fewer operations?
+
+One fixed replay does not establish a universally best planner.
+
+## Controls and accessibility
+
+The UI uses ordinary buttons for sample selection, Previous, Next, Play/Pause/Resume, and Reset.
+Motion never starts on page load. Manual selection, scrubbing, Previous/Next, Reset, or hiding the
+browser tab pauses playback; returning to the tab does not silently resume it.
+
+The real replay has a range control labeled `Replay position, 0 to 100 percent`. It follows
+acquisition order rather than potential alone, because the same potential occurs on the forward and
+return parts of a CV. The synthetic replay has one `Campaign event` range that advances all three
+planner lanes to comparable event numbers. Both ranges retain Previous/Next buttons, current-value
+text, and native keyboard behavior, so precise dragging is never required.
+
+Keyboard users can select formulations, inspect WE/RE/CE help, move through all seven physical
+steps, choose planner details, move through all five synthetic states, and open audit information.
+Charts have text summaries. Status and provenance are written explicitly rather than encoded only
+through color or animation. Meaningful changes use a polite live region; individual animation frames
+are not announced and autoplay never moves focus.
+
+When reduced motion is requested, timers stop, liquids and wires do not animate, CV and belief
+updates use discrete states, and the complete manual path remains available. Motion changes pacing,
+not evidence.
+
+## Hidden synthetic truth and artifacts
+
+Hidden truth stays unavailable to the planners and remains concealed in the interface until all
+verified campaign artifacts are complete. The post-run reveal is labeled `Synthetic truth, not
+experimental truth` and may include the private replay key and private seeds needed to reproduce the
+synthetic scenario.
+
+The audit area links to the exact manifest, summary, and planner ledgers. The local server verifies
+their schema, hashes, identities, commitments, completion status, and provenance before serving a
+campaign. An invalid bundle is rejected; the page must not substitute plausible-looking events.
+
+## Limitations
+
+- This is an illustrated replay. It makes no instrument call and performs no laboratory control.
+- The synthetic model returns a scalar normalized response, not a complete or experimentally
+  calibrated CV.
+- The three predefined labels are teaching hypotheses. Classifying among them is not open-ended
+  mechanism discovery and is not a diagnosis of a named real formulation.
+- One CV or one scan-rate scaling relationship does not prove mechanism. Real interpretation can be
+  affected by transport, adsorption, kinetics, background current, iR drop, coupled reactions,
+  geometry, scan order, time, and surface history.
+- A belief bar is a model probability within this synthetic scenario, not calibrated scientific
+  certainty.
+- No LLM is used. There is no real instrument call, autonomous laboratory, or institutional
+  endorsement.
+
+## Troubleshooting the local review
 
 - **Artifacts failed to load:** confirm all five expected JSON files exist beneath the selected
   output directory.

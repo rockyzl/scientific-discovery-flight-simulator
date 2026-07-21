@@ -3,284 +3,380 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="See a real cyclic-voltammogram, then replay how three experiment-selection policies identify a hidden response mechanism.">
+  <meta name="description" content="Replay a published cyclic-voltammetry workflow, then compare three experiment-selection policies in a separate synthetic benchmark.">
   <title>Scientific Discovery Flight Simulator</title>
   <link rel="stylesheet" href="/styles.css">
   <script src="/app.js" defer></script>
 </head>
 <body>
-  <a class="skip-link" href="#main">Skip to comparison</a>
+  <a class="skip-link" href="#main">Skip to the CV workbench</a>
 
   <header class="site-header">
-    <div class="shell">
-      <p class="eyebrow">A visible CV experiment-selection benchmark</p>
-      <h1>Which CV experiment should we run next?</h1>
-      <p class="lede">
-        Start with a published all-iron flow-battery voltammogram. Then watch three policies choose
-        scan rates, receive simulated current responses, and decide whether the hidden virtual
-        sample is diffusion-controlled, surface-controlled, or mixed.
-      </p>
+    <div class="shell header-inner">
+      <div>
+        <p class="eyebrow">Scientific Discovery Flight Simulator · CV workbench</p>
+        <h1>How a CV experiment becomes evidence</h1>
+      </div>
+      <p class="header-note">See the physical measurement first. Then cross into a separate, saved policy replay.</p>
+    </div>
+    <div class="shell first-planner-preview" aria-label="Separate synthetic planner preview">
+      <b>Separate synthetic preview</b>
+      <span><i aria-hidden="true">▦</i> Fixed Grid · regular</span>
+      <span><i aria-hidden="true">◎</i> Information Gain · targeted</span>
+      <span><i aria-hidden="true">✦</i> Random · scattered</span>
     </div>
   </header>
 
-  <div class="simulation-banner" role="note">
-    <span aria-hidden="true">◆</span>
-    <strong>SIMULATED RUN — NOT A LAB MEASUREMENT · REAL CV REFERENCE LABELED BELOW</strong>
-  </div>
+  <nav class="provenance-rail" aria-label="Data layers">
+    <a href="#real-workbench"><span aria-hidden="true">◆</span> REAL — published, author-processed CV data</a>
+    <a href="#synthetic-benchmark"><span aria-hidden="true">◇</span> SYNTHETIC — saved policy replay, not a lab measurement</a>
+  </nav>
 
   <main id="main" class="shell" tabindex="-1">
-    <p id="load-status" class="load-status" role="status" aria-live="polite">
-      Loading the published CV reference and frozen simulation artifacts…
+    <p id="load-status" class="load-status" role="status">
+      Loading the published CV reference and verified simulation artifacts…
     </p>
+    <div id="cartoon-status-live" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></div>
 
-    <section class="panel experiment-brief" aria-labelledby="brief-heading">
-      <div class="section-heading">
+    <section id="real-workbench" class="panel real-workbench" aria-labelledby="real-workbench-heading">
+      <div class="section-heading hero-heading">
         <div>
-          <p class="section-number">01 — what is being measured?</p>
-          <h2 id="brief-heading">Potential goes in. Current comes out.</h2>
+          <p class="section-number">01 — published CV workflow</p>
+          <h2 id="real-workbench-heading">A sample, three electrodes, and one measured curve</h2>
+        </div>
+        <span class="status-pill experimental-pill">◆ REAL REFERENCE</span>
+      </div>
+
+      <p class="scene-nonclaim">Explanatory schematic — not to scale</p>
+
+      <div class="mobile-lab-story" aria-hidden="true">
+        <div class="mobile-station bottle-icon"><b>Published formulation</b><span id="mobile-sample-label">Loading…</span></div>
+        <span class="mobile-arrow">↓ selected for replay</span>
+        <div class="mobile-station cell-icon"><b>Three-electrode cell</b><span>WE · RE · CE</span><small id="mobile-cell-label">EMPTY / FRESH START</small></div>
+        <span class="mobile-arrow">↑ potential command · ↓ current signal</span>
+        <div class="mobile-station pot-icon"><b>Potentiostat</b><span>0 → −1.2 → 0 V · 10 mV/s</span></div>
+        <span class="mobile-arrow">↓ reveals saved points</span>
+        <div class="mobile-station plot-icon"><b>Published CV</b><span>PUBLISHED, AUTHOR-PROCESSED EXPERIMENTAL DATA</span></div>
+      </div>
+
+      <div class="scene-actions">
+        <p><strong>Illustrated replay — no hardware connection.</strong><br>The animation reveals saved published points; it does not generate measurements.</p>
+        <div class="workflow-controls">
+          <button id="lab-play" class="primary-button" type="button">Replay published CV workflow</button>
+          <button id="lab-prev" class="secondary-button" type="button">Previous step</button>
+          <button id="lab-next" class="secondary-button" type="button">Next step</button>
+          <button id="lab-reset" class="secondary-button" type="button">Reset lab</button>
         </div>
       </div>
-      <p class="section-intro">
-        Cyclic voltammetry sweeps the working-electrode potential forward and back while measuring
-        current. The resulting current–potential curve is the CV. Its shape and how its peak current
-        changes with scan rate can help distinguish transport and surface-response hypotheses.
-      </p>
-      <div class="fact-grid">
-        <article><b>Physical sample</b><span>A named all-iron RFB anolyte</span></article>
-        <article><b>Instrument</b><span>Three-electrode cyclic voltammetry</span></article>
-        <article><b>Controlled input</b><span>Potential sweep and scan rate</span></article>
-        <article><b>Measured output</b><span>Current density versus potential</span></article>
-      </div>
-      <div class="layer-boundary">
-        <div><strong>Real-data layer</strong><span>The first chart is published experimental data.</span></div>
-        <span class="boundary-arrow" aria-hidden="true">→</span>
-        <div><strong>Benchmark layer</strong><span>The policy comparison is a separate synthetic teaching task.</span></div>
-      </div>
-    </section>
 
-    <section class="panel" aria-labelledby="real-cv-heading">
-      <div class="section-heading">
-        <div>
-          <p class="section-number">02 — a real CV experiment</p>
-          <h2 id="real-cv-heading">Change the electrolyte sample and run the published curve</h2>
-        </div>
-        <span class="status-pill experimental-pill">EXPERIMENTAL DATA</span>
+      <div class="lab-scene-wrap">
+        <svg id="real-lab-scene" class="lab-scene" viewBox="0 0 1160 500" role="img" aria-labelledby="real-lab-title real-lab-desc">
+          <title id="real-lab-title">Published cyclic-voltammetry workflow</title>
+          <desc id="real-lab-desc">A selected electrolyte formulation, three-electrode cell, potentiostat, potential sweep, current signal, and published CV curve.</desc>
+
+          <g id="real-sample-shelf" class="scene-station sample-station">
+            <rect class="station-surface" x="20" y="80" width="238" height="326" rx="24"></rect>
+            <text class="station-title" x="40" y="115">PUBLISHED FORMULATIONS</text>
+            <g id="real-sample-base" class="sample-bottle" transform="translate(42 150)">
+              <path d="M18 0h50v32c25 10 34 40 34 76v75H-16v-75c0-36 9-66 34-76z"></path>
+              <text x="43" y="92" text-anchor="middle">BASE</text>
+              <text x="43" y="112" text-anchor="middle">FeCl₂</text>
+            </g>
+            <g id="real-sample-glycine" class="sample-bottle" transform="translate(112 150)">
+              <path d="M18 0h50v32c25 10 34 40 34 76v75H-16v-75c0-36 9-66 34-76z"></path>
+              <text x="43" y="92" text-anchor="middle">+</text>
+              <text x="43" y="112" text-anchor="middle">GLY</text>
+            </g>
+            <g id="real-sample-lactic" class="sample-bottle" transform="translate(182 150)">
+              <path d="M18 0h50v32c25 10 34 40 34 76v75H-16v-75c0-36 9-66 34-76z"></path>
+              <text x="43" y="87" text-anchor="middle">+ GLY</text>
+              <text x="43" y="108" text-anchor="middle">+ LA</text>
+            </g>
+            <g id="real-sample-record" transform="translate(40 350)">
+              <rect width="196" height="38" rx="8"></rect>
+              <text id="real-scene-selected" x="98" y="24" text-anchor="middle">Loading source record…</text>
+            </g>
+          </g>
+
+          <path class="scene-flow-arrow" d="M270 244h66" marker-end="url(#arrow-real)"></path>
+
+          <g id="real-cell" class="scene-station cell-station">
+            <rect class="station-surface" x="340" y="80" width="270" height="326" rx="24"></rect>
+            <text class="station-title" x="360" y="115">THREE-ELECTRODE CELL</text>
+            <path class="cell-glass" d="M391 190v135c0 38 30 58 84 58s84-20 84-58V190z"></path>
+            <path id="real-cell-liquid" class="cell-liquid" d="M397 263v60c0 33 27 50 78 50s78-17 78-50v-60z"></path>
+            <g id="real-electrode-we" class="electrode we">
+              <line x1="421" y1="151" x2="421" y2="320"></line><rect x="407" y="303" width="28" height="43" rx="5"></rect><text x="421" y="140" text-anchor="middle">WE</text>
+            </g>
+            <g id="real-electrode-re" class="electrode re">
+              <line x1="475" y1="151" x2="475" y2="310"></line><path d="M463 287h24l-5 42h-14z"></path><text x="475" y="140" text-anchor="middle">RE</text>
+            </g>
+            <g id="real-electrode-ce" class="electrode ce">
+              <line x1="529" y1="151" x2="529" y2="320"></line><rect x="515" y="296" width="28" height="50" rx="5"></rect><text x="529" y="140" text-anchor="middle">CE</text>
+            </g>
+            <text id="real-cell-sample-tag" class="sample-tag" x="475" y="430" text-anchor="middle">EMPTY / FRESH START</text>
+            <g id="real-waste-tray" class="conditional-tool" hidden>
+              <path d="M350 448h110l-12 35h-86z"></path><text x="405" y="473" text-anchor="middle">REMOVED</text>
+            </g>
+            <g id="real-rinse-tool" class="conditional-tool" hidden>
+              <path d="M500 452h26l7 29h-40z"></path><text x="565" y="473" text-anchor="middle">protocol-defined preparation</text>
+            </g>
+          </g>
+
+          <defs>
+            <marker id="arrow-real" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0 0l9 3-9 3z"></path></marker>
+            <marker id="arrow-signal" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0 0l9 3-9 3z"></path></marker>
+          </defs>
+
+          <g id="real-potentiostat" class="scene-station instrument-station">
+            <rect class="station-surface" x="655" y="80" width="214" height="326" rx="24"></rect>
+            <text class="station-title" x="675" y="115">POTENTIOSTAT</text>
+            <rect class="instrument-box" x="688" y="155" width="148" height="135" rx="16"></rect>
+            <text x="762" y="185" text-anchor="middle" class="instrument-label">controls potential</text>
+            <text id="real-potential-value" x="762" y="224" text-anchor="middle" class="instrument-value">0.000 V</text>
+            <text id="real-current-value" x="762" y="254" text-anchor="middle" class="instrument-readout">current: source replay</text>
+            <g id="real-sweep-waveform">
+              <polyline points="683,337 725,305 779,368 834,337"></polyline>
+              <circle id="real-sweep-cursor" cx="683" cy="337" r="7"></circle>
+            </g>
+            <text id="real-scan-rate" x="762" y="392" text-anchor="middle">0 → −1.2 → 0 V · 10 mV/s</text>
+            <text id="real-cycle-counter" x="762" y="430" text-anchor="middle">cycle 1 / 2</text>
+          </g>
+
+          <path id="real-lead-we" class="lead potential-lead" d="M421 151C500 70 670 80 704 155"></path>
+          <path id="real-lead-re" class="lead reference-lead" d="M475 151C545 105 675 115 730 155"></path>
+          <path id="real-lead-ce" class="lead current-lead" d="M529 151C590 140 695 145 785 155"></path>
+          <path id="real-potential-command" class="signal-arrow potential-arrow" d="M682 133H550" marker-end="url(#arrow-signal)"></path>
+          <text class="signal-label" x="616" y="124" text-anchor="middle">Potential command →</text>
+          <path id="real-current-signal" class="signal-arrow current-arrow" d="M552 177H682" marker-end="url(#arrow-signal)"></path>
+          <text class="signal-label" x="616" y="197" text-anchor="middle">← Current signal</text>
+
+          <g id="real-cv-display" class="scene-station cv-station">
+            <rect class="station-surface" x="910" y="80" width="230" height="326" rx="24"></rect>
+            <text class="station-title" x="930" y="115">PUBLISHED CV</text>
+            <rect class="mini-plot" x="934" y="145" width="181" height="180" rx="10"></rect>
+            <line class="mini-axis" x1="950" x2="1098" y1="300" y2="300"></line>
+            <line class="mini-axis" x1="950" x2="950" y1="165" y2="300"></line>
+            <path id="real-cv-path" class="mini-cv-reference"></path>
+            <path id="real-cv-progress-path" class="mini-cv-progress"></path>
+            <circle id="real-cv-cursor" class="mini-cv-cursor" cx="950" cy="300" r="5"></circle>
+            <text id="real-cv-awaiting" class="mini-cv-awaiting" x="1024" y="230" text-anchor="middle" hidden>Awaiting sample load</text>
+            <text x="1024" y="344" text-anchor="middle">current density measured</text>
+            <g id="real-provenance-badge">
+              <rect x="926" y="361" width="198" height="29" rx="14"></rect>
+              <text x="1025" y="380" text-anchor="middle">PUBLISHED, AUTHOR-PROCESSED EXPERIMENTAL DATA</text>
+            </g>
+          </g>
+        </svg>
+        <p id="real-scene-summary" class="scene-summary">Loading published reference…</p>
       </div>
-      <p class="section-intro">
-        Choose one published all-iron flow-battery anolyte. The animation makes the physical
-        workflow explicit: remove the previous formulation when needed, rinse, load the next
-        sample, equilibrate, run the potential sweep, and retain the authors’ processed second-cycle
-        curve.
-      </p>
-      <div id="sample-tabs" class="sample-tabs" role="group" aria-label="Choose a real electrolyte sample"></div>
-      <div class="real-lab-grid">
-        <div class="chart-card">
+
+      <div id="sample-tabs" class="sample-tabs" role="radiogroup" aria-label="Choose a published electrolyte formulation"></div>
+
+      <ol id="lab-workflow" class="lab-workflow" aria-label="Seven-step published CV workflow"></ol>
+      <p id="lab-narration" class="workflow-narration"></p>
+
+      <div class="scrubber-row">
+        <label for="lab-scrubber"><b>Replay position</b><span id="lab-scrubber-value">0% · cycle 1 / 2</span></label>
+        <input id="lab-scrubber" type="range" min="0" max="100" step="1" value="0" aria-label="Replay position, 0 to 100 percent" aria-describedby="lab-scrubber-help">
+        <p id="lab-scrubber-help">Acquisition order through two recorded cycles; this is not an instrument control.</p>
+      </div>
+
+      <div class="electrode-help-controls" aria-label="Inspect electrode roles">
+        <span>Inspect:</span>
+        <button type="button" data-electrode="we">WE</button>
+        <button type="button" data-electrode="re">RE</button>
+        <button type="button" data-electrode="ce">CE</button>
+      </div>
+      <div id="electrode-help" class="electrode-help" tabindex="-1" hidden>
+        <b id="electrode-help-title"></b>
+        <p id="electrode-help-copy"></p>
+        <button id="electrode-help-close" type="button">Close</button>
+      </div>
+
+      <div class="real-detail-grid">
+        <article class="chart-card">
           <div class="chart-heading">
-            <div><b id="real-sample-name">Loading sample…</b><span id="real-sample-composition"></span></div>
+            <div><b id="real-sample-name">Loading published curve…</b><span id="real-sample-composition"></span></div>
             <span id="real-protocol" class="mono-note"></span>
           </div>
           <svg id="real-cv-chart" class="cv-chart" viewBox="0 0 760 430" role="img" aria-labelledby="real-chart-title real-chart-desc">
             <title id="real-chart-title">Published cyclic voltammogram</title>
-            <desc id="real-chart-desc">Current density plotted against working-electrode potential for the selected electrolyte.</desc>
+            <desc id="real-chart-desc">Published current density against working-electrode potential for the selected source formulation.</desc>
           </svg>
-          <p class="chart-caption">x: potential vs Ag/AgCl/KCl (sat’d) · y: total current density (mA cm⁻²)</p>
-        </div>
-        <aside class="sample-card" aria-labelledby="sample-record-heading">
-          <p class="section-number">sample record</p>
-          <h3 id="sample-record-heading">What is physically in the cell</h3>
+          <p class="chart-caption">x: working-electrode potential vs Ag/AgCl/KCl (sat’d) / V · y: total current density / mA cm⁻²</p>
+        </article>
+
+        <details class="sample-card source-details">
+          <summary>Sample record &amp; source</summary>
           <dl id="sample-record"></dl>
-        </aside>
-      </div>
-      <div class="workflow-player">
-        <div class="workflow-controls">
-          <button id="lab-play" class="primary-button" type="button">Run experiment step by step</button>
-          <button id="lab-next" class="tab-button" type="button">Next step</button>
-          <button id="lab-reset" class="tab-button" type="button">Reset</button>
-        </div>
-        <p id="lab-narration" class="workflow-narration" role="status" aria-live="polite"></p>
-        <ol id="lab-workflow" class="lab-workflow"></ol>
-      </div>
-      <p class="data-credit">
-        Published, author-processed experimental data: Engler, Stich, Baumer &amp; Bund,
-        <a href="https://doi.org/10.5281/zenodo.15730784" target="_blank" rel="noreferrer">Zenodo 10.5281/zenodo.15730784</a>,
-        CC BY 4.0. The authors report a 0 to −1.2 V sweep at 10 mV/s for these records; the source
-        curve contains real measured points and is not generated by this demo.
-      </p>
-    </section>
-
-    <section class="panel" aria-labelledby="task-heading">
-      <div class="section-heading">
-        <div>
-          <p class="section-number">03 — the synthetic decision task</p>
-          <h2 id="task-heading">One virtual sample; choose the next scan rate</h2>
-        </div>
-        <span class="status-pill">SYNTHETIC BENCHMARK</span>
-      </div>
-      <p class="section-intro">
-        The benchmark does not reuse the published curve above. It creates one unnamed virtual
-        sample with a hidden current-scaling mechanism. Each policy may request scan rates from
-        5–500 mV/s. It sees noisy normalized responses, updates three probabilities, and stops when
-        sufficiently confident or out of budget.
-      </p>
-      <div class="hypothesis-grid">
-        <article><span class="curve-key diffusion"></span><b>Diffusion</b><code>response ∝ √scan rate</code></article>
-        <article><span class="curve-key surface"></span><b>Surface</b><code>response ∝ scan rate</code></article>
-        <article><span class="curve-key mixed"></span><b>Mixed</b><code>response = both contributions</code></article>
-      </div>
-      <div class="process-strip" aria-label="Synthetic campaign process">
-        <span>1. Policy selects scan rate</span><i aria-hidden="true">→</i>
-        <span>2. Validator checks 5–500 mV/s</span><i aria-hidden="true">→</i>
-        <span>3. Virtual instrument measures</span><i aria-hidden="true">→</i>
-        <span>4. Beliefs update</span><i aria-hidden="true">→</i>
-        <span>5. Continue or stop</span>
-      </div>
-      <p class="trust-note">
-        No physical sample is changed inside this synthetic campaign: all scan rates probe the same
-        virtual sample. Sample replacement belongs to the real multi-formulation workflow above.
-      </p>
-    </section>
-
-    <section class="panel identity" aria-labelledby="identity-heading">
-      <div class="section-heading">
-        <div>
-          <p class="section-number">04 — run identity</p>
-          <h2 id="identity-heading">Same test, visible contract</h2>
-        </div>
-        <span id="run-state" class="status-pill" data-state="loading">LOADING</span>
-      </div>
-      <dl id="identity-grid" class="identity-grid"></dl>
-      <p class="trust-note">
-        The planners saw public campaign state only. Hidden mechanism parameters, future failures,
-        and evaluator logic were not planner inputs.
-      </p>
-    </section>
-
-    <section class="panel" aria-labelledby="comparison-heading">
-      <div class="section-heading">
-        <div>
-          <p class="section-number">05 — planner comparison</p>
-          <h2 id="comparison-heading">How many virtual experiments did each policy need?</h2>
-        </div>
-      </div>
-      <p class="section-intro">
-        Read the cards first: each one states the final mechanism, whether it was correct, and the
-        number of experiments used. The detailed metric table remains below for audit.
-      </p>
-      <div id="planner-cards" class="planner-cards" aria-label="Planner summary cards"></div>
-      <div class="table-scroll" tabindex="0" aria-label="Scrollable planner comparison table">
-        <table>
-          <caption>Metrics recorded in the frozen summary artifact</caption>
-          <thead id="comparison-head"></thead>
-          <tbody id="comparison-body"></tbody>
-        </table>
+          <p class="data-credit">
+            Published, author-processed experimental data: Engler, Stich, Baumer &amp; Bund,
+            <a href="https://doi.org/10.5281/zenodo.15730784" target="_blank" rel="noreferrer">Zenodo 10.5281/zenodo.15730784</a>,
+            CC BY 4.0. Author-processed plotting data; the documented second cycle is shown. Not raw data.
+          </p>
+        </details>
       </div>
     </section>
 
-    <section class="panel" aria-labelledby="replay-heading">
+    <section class="world-gate" aria-labelledby="world-gate-heading" tabindex="-1">
+      <p class="section-number">Mandatory boundary</p>
+      <h2 id="world-gate-heading">PHYSICAL CONTEXT ENDS HERE</h2>
+      <p><b>Above:</b> published, author-processed experimental curves from named formulations at 10 mV/s.</p>
+      <p><b>Below:</b> a separate synthetic response-scaling benchmark using one unnamed virtual sample.</p>
+      <p class="gate-nonclaim">The published curves are context only. They do not fit, train, calibrate, validate, or supply observations to the synthetic benchmark.</p>
+      <p class="gate-short">The published curves are context only — not simulator input.</p>
+      <p class="gate-short">The synthetic benchmark does not reuse the published curve.</p>
+    </section>
+
+    <section id="synthetic-benchmark" class="panel synthetic-panel" aria-labelledby="synthetic-heading">
       <div class="section-heading">
         <div>
-          <p class="section-number">06 — step-by-step policy replay</p>
-          <h2 id="replay-heading">Watch the virtual experiment unfold</h2>
+          <p class="section-number">02 — separate policy replay</p>
+          <h2 id="synthetic-heading">Three planners, one committed synthetic scenario</h2>
         </div>
+        <span class="status-pill synthetic-pill">◇ SYNTHETIC BENCHMARK</span>
       </div>
-      <p class="section-intro">
-        This is a replay of saved JSON events, not a live experiment. Choose a policy to inspect its
-        proposals, validation decisions, simulated observations, failures, beliefs, and stop reason.
-      </p>
-      <div id="replay-tabs" class="tabs" role="tablist" aria-label="Choose planner replay"></div>
-      <div
-        id="replay-panel"
-        role="tabpanel"
-        aria-labelledby="replay-tab-random"
-        tabindex="0"
-      >
-        <div id="replay-summary" class="replay-summary"></div>
-        <div class="strategy-player">
-          <div class="strategy-chart-wrap">
-            <svg id="strategy-chart" class="cv-chart" viewBox="0 0 760 410" role="img" aria-labelledby="strategy-chart-title strategy-chart-desc">
-              <title id="strategy-chart-title">Candidate response mechanisms and revealed measurements</title>
-              <desc id="strategy-chart-desc">The three public response hypotheses and the observations revealed up to the selected experiment step.</desc>
-            </svg>
+      <p class="synthetic-banner">SIMULATED RUN — NOT A LAB MEASUREMENT · SYNTHETIC TEACHING EMULATOR · SAVED REPLAY · NOT A LAB MEASUREMENT</p>
+      <p class="synthetic-nonclaim">Synthetic teaching emulator — saved replay, not a lab measurement</p>
+      <p class="section-intro">One unnamed virtual sample is used for every scan-rate request. Each planner receives an isolated replay of the same public contract and committed scenario; no lane receives another lane’s observations.</p>
+
+      <div id="synthetic-scene" class="synthetic-scene">
+        <div id="synthetic-virtual-sample" class="virtual-sample-card">
+          <span class="virtual-sample-icon" aria-hidden="true">◇</span>
+          <div><b>Virtual sample A</b><span>One unnamed virtual sample for every scan-rate request</span></div>
+        </div>
+
+        <ol id="synthetic-loop" class="synthetic-loop" aria-label="Five-state synthetic request loop">
+          <li id="synthetic-state-select"><b>1 · SELECT RATE</b><span>5–500 mV/s</span></li>
+          <li id="synthetic-state-validate"><b>2 · VALIDATE REQUEST</b><span>public range gate</span></li>
+          <li id="synthetic-state-execute"><b>3 · EXECUTE VIRTUAL OPERATION</b><span>scalar response or failure</span></li>
+          <li id="synthetic-state-beliefs"><b>4 · UPDATE BELIEFS</b><span>three supplied models</span></li>
+          <li id="synthetic-state-stop"><b>5 · CONTINUE OR STOP</b><span>budget and stop reason</span></li>
+        </ol>
+
+        <div id="replay-tabs" class="planner-lanes" role="tablist" aria-label="Planner replay lanes">
+          <button id="synthetic-planner-random" class="planner-lane" type="button" role="tab" data-planner="random" aria-controls="replay-panel" aria-selected="true">Random · scattered</button>
+          <button id="synthetic-planner-fixed-grid" class="planner-lane" type="button" role="tab" data-planner="fixed_grid" aria-controls="replay-panel" aria-selected="false" tabindex="-1">Fixed Grid · regular</button>
+          <button id="synthetic-planner-information-gain" class="planner-lane" type="button" role="tab" data-planner="information_gain" aria-controls="replay-panel" aria-selected="false" tabindex="-1">Information Gain · targeted</button>
+        </div>
+
+        <div class="campaign-controls">
+          <div class="workflow-controls">
+            <button id="strategy-prev" class="secondary-button" type="button">Previous event</button>
+            <button id="strategy-play" class="primary-button" type="button">Play all</button>
+            <button id="strategy-next" class="secondary-button" type="button">Next event</button>
+            <button id="strategy-reset" class="secondary-button" type="button">Reset synthetic replay</button>
           </div>
-          <aside class="strategy-step-card">
-            <p class="section-number">current replay step</p>
-            <h3 id="strategy-step-title">Before experiment 1</h3>
-            <p id="strategy-step-copy"></p>
-            <div id="belief-bars" class="belief-bars" aria-label="Current mechanism probabilities"></div>
-            <div class="workflow-controls">
-              <button id="strategy-prev" class="tab-button" type="button">Previous</button>
-              <button id="strategy-next" class="primary-button" type="button">Next experiment</button>
-              <button id="strategy-play" class="tab-button" type="button">Play</button>
-            </div>
-          </aside>
+          <div class="scrubber-row synthetic-scrubber">
+            <label for="strategy-scrubber"><b>Campaign event</b><span id="strategy-scrubber-value">0 / 0</span></label>
+            <input id="strategy-scrubber" type="range" min="0" max="0" step="1" value="0" aria-label="Campaign event, 0 to 0" aria-describedby="strategy-scrubber-help">
+            <p id="strategy-scrubber-help">Saved event index shared across all three isolated planner replays.</p>
+          </div>
         </div>
-        <ol id="event-list" class="event-list" aria-live="polite"></ol>
+
+        <div id="replay-panel" role="tabpanel" aria-labelledby="synthetic-planner-random" tabindex="0">
+          <div id="replay-summary" class="replay-summary"></div>
+          <div class="strategy-player">
+            <article id="synthetic-response-plot" class="strategy-chart-wrap">
+              <div class="chart-label-row">
+                <b>Normalized response vs scan rate — synthetic teaching model</b>
+                <span>◇ SYNTHETIC</span>
+              </div>
+              <svg id="strategy-chart" class="cv-chart" viewBox="0 0 760 410" role="img" aria-labelledby="strategy-chart-title strategy-chart-desc">
+                <title id="strategy-chart-title">Synthetic response hypotheses and revealed unitless observations</title>
+                <desc id="strategy-chart-desc">Three predefined synthetic response models and saved observations revealed for the selected planner.</desc>
+              </svg>
+              <p class="chart-caption">x: requested scan rate / mV s⁻¹ · y: Unitless normalized response — not experimental current density</p>
+            </article>
+            <aside class="strategy-step-card">
+              <p class="section-number">selected lane</p>
+              <h3 id="strategy-step-title">Before event 1</h3>
+              <p id="strategy-step-copy"></p>
+              <div id="synthetic-validator" class="synthetic-device"><b>Validator</b><span>5 ≤ scan rate ≤ 500 mV/s</span></div>
+              <div id="synthetic-virtual-instrument" class="synthetic-device"><b>Virtual operation</b><span id="virtual-operation-status">waiting</span></div>
+              <div id="synthetic-belief-bars">
+                <p class="belief-label">Planner belief within three predefined synthetic models</p>
+                <div id="belief-bars" class="belief-bars" aria-label="Current planner beliefs"></div>
+              </div>
+              <div id="synthetic-budget-status" class="budget-status"></div>
+            </aside>
+          </div>
+          <p id="strategy-text-summary" class="scene-summary"></p>
+        </div>
+
+        <div id="planner-cards" class="planner-cards" aria-label="Three-planner finish comparison"></div>
+        <p class="trust-note">One fixed synthetic scenario/run — not evidence of a universally best planner. Which strategy learned enough with fewer valid operations, and what did it sacrifice?</p>
       </div>
     </section>
 
-    <section class="panel" aria-labelledby="downloads-heading">
-      <div class="section-heading">
-        <div>
-          <p class="section-number">07 — artifacts</p>
-          <h2 id="downloads-heading">Inspect the source JSON</h2>
-        </div>
-      </div>
-      <nav class="download-grid" aria-label="Artifact downloads">
-        <a href="/artifacts/manifest.json" download>Manifest JSON</a>
-        <a href="/artifacts/summary.json" download>Summary JSON</a>
-        <a href="/artifacts/ledgers/random.json" download>Random ledger</a>
-        <a href="/artifacts/ledgers/fixed_grid.json" download>Fixed-grid ledger</a>
-        <a href="/artifacts/ledgers/information_gain.json" download>Information-gain ledger</a>
-      </nav>
-    </section>
+    <details id="audit-details" class="panel audit-panel">
+      <summary><span>Audit this replay</span><small>Run identity, metrics, events, downloads, and post-run truth</small></summary>
 
-    <section class="panel reveal" aria-labelledby="reveal-heading">
-      <div class="section-heading">
-        <div>
-          <p class="section-number">08 — post-run reveal</p>
-          <h2 id="reveal-heading">Benchmark hidden truth</h2>
+      <section class="audit-section identity" aria-labelledby="identity-heading">
+        <div class="section-heading">
+          <div><p class="section-number">run identity</p><h2 id="identity-heading">Same test, visible contract</h2></div>
+          <span id="run-state" class="status-pill" data-state="loading">LOADING</span>
         </div>
-      </div>
-      <p id="reveal-explanation" class="section-intro">
-        Hidden truth remains concealed until all artifacts load and every campaign is complete.
-      </p>
-      <button id="reveal-button" class="primary-button" type="button" disabled>
-        Reveal benchmark truth
-      </button>
-      <div
-        id="truth-panel"
-        class="truth-panel"
-        role="region"
-        aria-labelledby="reveal-heading"
-        aria-live="polite"
-        tabindex="-1"
-        hidden
-      >
-        <p class="truth-label">SYNTHETIC BENCHMARK TRUTH — NOT EXPERIMENTAL TRUTH</p>
-        <pre id="truth-value"></pre>
-        <p class="truth-warning">
-          Private replay seeds below reproduce this synthetic benchmark. They are not evidence from
-          a laboratory and were unavailable to planners during the campaign.
-        </p>
-        <pre id="replay-identity"></pre>
-      </div>
-    </section>
+        <dl id="identity-grid" class="identity-grid"></dl>
+        <p class="trust-note">Planners saw public campaign state only. Hidden mechanism, private seeds, future failures, and evaluator logic were not planner inputs.</p>
+      </section>
+
+      <section class="audit-section" aria-labelledby="comparison-heading">
+        <p class="section-number">complete metrics</p>
+        <h2 id="comparison-heading">Frozen summary artifact</h2>
+        <div class="table-scroll" tabindex="0" aria-label="Scrollable planner comparison table">
+          <table><caption>Metrics recorded in the verified summary artifact</caption><thead id="comparison-head"></thead><tbody id="comparison-body"></tbody></table>
+        </div>
+      </section>
+
+      <section class="audit-section" aria-labelledby="events-heading">
+        <p class="section-number">selected planner ledger</p>
+        <h2 id="events-heading">Saved request events</h2>
+        <ol id="event-list" class="event-list"></ol>
+      </section>
+
+      <section class="audit-section" aria-labelledby="downloads-heading">
+        <p class="section-number">artifacts</p>
+        <h2 id="downloads-heading">Inspect the source JSON</h2>
+        <nav class="download-grid" aria-label="Artifact downloads">
+          <a href="/artifacts/manifest.json" download>Manifest JSON</a>
+          <a href="/artifacts/summary.json" download>Summary JSON</a>
+          <a href="/artifacts/ledgers/random.json" download>Random ledger</a>
+          <a href="/artifacts/ledgers/fixed_grid.json" download>Fixed-grid ledger</a>
+          <a href="/artifacts/ledgers/information_gain.json" download>Information-gain ledger</a>
+        </nav>
+      </section>
+
+      <section class="audit-section reveal" aria-labelledby="reveal-heading">
+        <p class="section-number">post-run reveal</p>
+        <h2 id="reveal-heading">Synthetic benchmark truth</h2>
+        <p id="reveal-explanation">Hidden truth remains concealed until all verified campaign artifacts are complete.</p>
+        <button id="reveal-button" class="primary-button" type="button" disabled>Reveal synthetic benchmark truth</button>
+        <div id="synthetic-post-run-reveal">
+          <div id="truth-panel" class="truth-panel" role="region" aria-labelledby="reveal-heading" tabindex="-1" hidden>
+            <p class="truth-label">Synthetic truth, not experimental truth</p>
+            <pre id="truth-value"></pre>
+            <p class="truth-warning">Private replay seeds reproduce this synthetic benchmark. They are not laboratory evidence and were unavailable to planners.</p>
+            <pre id="replay-identity"></pre>
+          </div>
+        </div>
+      </section>
+    </details>
 
     <aside class="boundary" aria-labelledby="boundary-heading">
-      <h2 id="boundary-heading">What this does not prove</h2>
-      <p>
-        Performance in this teaching emulator does not establish real-laboratory capability,
-        mechanistic understanding, or transfer to real electrochemistry. The demo calls no LLM and
-        controls no instrument.
-      </p>
+      <h2 id="boundary-heading">Exact limits</h2>
+      <p>The real curve is published context, not simulator input. The synthetic model distinguishes only three predefined toy hypotheses and does not diagnose a named real formulation or discover an unanticipated mechanism.</p>
+      <p><b>No LLM, no real instrument call, no laboratory control, and no institutional endorsement.</b></p>
     </aside>
+
+    <noscript>
+      <aside class="boundary">
+        <b>JavaScript is off.</b> This page contains a published, author-processed CV reference and a separate synthetic planner replay. The published curve is not an input to the simulation.
+      </aside>
+    </noscript>
   </main>
 
-  <footer class="site-footer">
-    <div class="shell">
-      Independent research prototype. Artifact replay only; no affiliation or institutional
-      endorsement is implied.
-    </div>
-  </footer>
+  <footer class="site-footer"><div class="shell">Independent research prototype · illustrated and saved-artifact replay only</div></footer>
 </body>
 </html>

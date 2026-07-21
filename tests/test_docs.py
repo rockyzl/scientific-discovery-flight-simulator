@@ -55,7 +55,7 @@ def test_demo_has_accessibility_and_trust_hooks() -> None:
     assert 'aria-live="polite"' in html
     assert 'role="tablist"' in html
     assert 'role="tabpanel"' in html
-    assert 'aria-labelledby="replay-tab-random"' in html
+    assert 'aria-labelledby="synthetic-planner-random"' in html
     assert 'id="truth-panel"' in html and 'tabindex="-1"' in html
     assert "SIMULATED RUN — NOT A LAB MEASUREMENT" in html
     assert "prefers-reduced-motion" in css
