@@ -26,6 +26,7 @@ STATIC_ROUTES = {
     "/index.html": DEMO_DIR / "index.html",
     "/styles.css": DEMO_DIR / "styles.css",
     "/app.js": DEMO_DIR / "app.js",
+    "/real-cv-data.json": DEMO_DIR / "data" / "all_iron_rfb_cv.json",
 }
 REQUIRED_ARTIFACTS = (
     "manifest.json",

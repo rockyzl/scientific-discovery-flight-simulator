@@ -72,6 +72,16 @@ def test_static_demo_and_json_are_served(running_server: str) -> None:
     assert headers.get_content_type() == "application/json"
     assert json.loads(body)["post_run_reveal"]["provenance"] == "simulated"
 
+    status, headers, body = get(f"{running_server}/real-cv-data.json")
+    assert status == 200
+    assert headers.get_content_type() == "application/json"
+    real_cv = json.loads(body)
+    assert real_cv["provenance"] == "published_processed_experimental_data"
+    assert real_cv["source"]["doi"] == "10.5281/zenodo.15730784"
+    assert real_cv["source"]["license"] == "CC BY 4.0"
+    assert len(real_cv["samples"]) == 3
+    assert all(sample["point_count"] == len(sample["points"]) > 1000 for sample in real_cv["samples"])
+
 
 def test_direct_demo_help_works_without_pythonpath() -> None:
     environment = os.environ.copy()
@@ -175,6 +185,30 @@ def test_pre_reveal_identity_does_not_render_private_seeds() -> None:
     assert "seeds.commitments?.failure_seed" in identity
     assert "planner_seed" in identity
     assert "scenario_sha256" in identity
+
+
+def test_ui_separates_real_reference_from_synthetic_benchmark() -> None:
+    html = (ROOT / "demo" / "index.html").read_text(encoding="utf-8")
+    script = (ROOT / "demo" / "app.js").read_text(encoding="utf-8")
+    assert "EXPERIMENTAL DATA" in html
+    assert "SYNTHETIC BENCHMARK" in html
+    assert "does not reuse the published curve" in html
+    assert "Remove previous sample" in script
+    assert "Rinse and prepare" in script
+    assert 'realCV: "/real-cv-data.json"' in script
+
+
+def test_real_cv_reference_has_pinned_source_identity() -> None:
+    payload = json.loads((ROOT / "demo" / "data" / "all_iron_rfb_cv.json").read_text())
+    source = payload["source"]
+    assert source["record_url"] == "https://zenodo.org/records/15730784"
+    assert source["processed_archive_sha256"] == (
+        "cab1057d203839f1edcb00ad48625212097ff0d673801145eb0c92816899fb62"
+    )
+    assert source["processed_member_sha256"] == (
+        "8edf5a999a689b58cd1c410ea2d250bce3eeedad9bbfe0efbaa7972a453129df"
+    )
+    assert {sample["protocol"]["scan_rate_mV_s"] for sample in payload["samples"]} == {10.0}
 
 
 def test_numeric_formatter_preserves_scientific_magnitude() -> None:

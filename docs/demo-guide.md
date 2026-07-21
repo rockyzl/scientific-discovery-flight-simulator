@@ -13,15 +13,26 @@ small local review server, not a production deployment.
 
 ## What you are looking at
 
-The banner **SIMULATED RUN — NOT A LAB MEASUREMENT** applies to every value on the page.
+The page intentionally contains two provenance layers. They are visually and textually separated:
 
-1. **Run identity** shows scenario commitment, completion status, versions, public planner seed, and
+- **Published experimental reference:** author-processed CV curves for named all-iron RFB anolytes.
+- **Synthetic benchmark:** the random, fixed-grid, and information-gain policy campaigns.
+
+The experimental chart is contextual evidence, not benchmark input. The policies do not train on,
+fit, or select actions from those published curves.
+
+1. **What is measured** names the sample, instrument, controlled input, measured output, and the
+   boundary between real and simulated data.
+2. **Real CV experiment** lets you change among named electrolyte formulations, view their published
+   current-density curves, and replay the physical rinse/load/equilibrate/sweep process.
+3. **Synthetic task** states the exact hidden-mechanism question and three response hypotheses.
+4. **Run identity** shows scenario commitment, completion status, versions, public planner seed, and
    manifest identity. Private world/noise/failure seeds remain concealed before reveal.
-2. **Planner comparison** shows separate metrics for random, fixed-grid, and
-   information-gain policies.
-3. **Evidence replay** lets you choose a planner and inspect each recorded event in order.
-4. **Downloads** link to the exact JSON artifacts currently displayed.
-5. **Hidden truth** is read only from `summary.json.post_run_reveal` and stays concealed until a
+5. **Planner comparison** states each final mechanism and attempt count before the detailed metrics.
+6. **Policy replay** animates the chosen scan rate, simulated observation, and probability update,
+   while retaining the complete evidence-event cards below.
+7. **Downloads** link to the exact JSON artifacts currently displayed.
+8. **Hidden truth** is read only from `summary.json.post_run_reveal` and stays concealed until a
    verified, complete artifact set has loaded. Revealing it shows the benchmark answer used by the
    evaluator and private replay seeds, with an explicit synthetic-data warning—not a laboratory
    truth.
@@ -46,6 +57,9 @@ motion preferences. A live status region announces artifact loading and errors.
 
 - **Artifacts failed to load:** confirm all five expected JSON files exist beneath the selected
   output directory.
+- **Real CV reference failed to load:** confirm `demo/data/all_iron_rfb_cv.json` exists. Rebuild it
+  with `uv run python scripts/build_real_cv_reference.py`; the builder verifies pinned SHA-256
+  checksums before writing.
 - **Artifact rejected:** core verification detected a schema, hash, identity, commitment, or
   provenance mismatch. Regenerate the bundle; do not edit generated JSON by hand.
 - **Hidden truth unavailable:** the artifact set is incomplete or is not marked completed.

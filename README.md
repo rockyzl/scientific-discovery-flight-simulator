@@ -3,7 +3,8 @@
 **Compare how experiment-selection policies behave under the same simulated world, budget,
 constraints, noise, and instrument failures.**
 
-> **SIMULATED RUN — NOT A LAB MEASUREMENT**
+> **SIMULATED RUN — NOT A LAB MEASUREMENT.** This statement applies to the policy benchmark. A
+> separately labeled chart uses cited, published experimental CV data.
 
 This repository is an offline, deterministic research prototype for replaying scientific campaigns.
 Its first world is a transparent cyclic-voltammetry (CV) teaching emulator in which a planner must
@@ -24,14 +25,20 @@ scientific reasoning.
 
 ## What the demo shows
 
-The browser demo reads a completed artifact directory; it does not run a model or experiment.
+The browser demo reads a completed artifact directory and a bundled, cited real-data reference; it
+does not control an instrument or run a new laboratory experiment.
 
-1. Compare `random`, `fixed_grid`, and `information_gain` with separate metrics.
-2. Inspect each campaign event in order, including rejected requests and injected failures.
-3. See the scenario, budget, public planner seed, private-seed commitments, versions, and artifact
+1. Inspect three published all-iron RFB anolyte CV curves and play the physical sample-change and
+   measurement workflow step by step.
+2. See the exact boundary between that real-data reference and the separate synthetic mechanism
+   benchmark.
+3. Compare `random`, `fixed_grid`, and `information_gain`: selected scan rate, simulated response,
+   changing mechanism probabilities, final answer, and attempts used.
+4. Inspect each campaign event in order, including rejected requests and injected failures.
+5. See the scenario, budget, public planner seed, private-seed commitments, versions, and artifact
    identity.
-4. Download the manifest, summary, and planner ledgers as JSON.
-5. Reveal benchmark hidden truth only after all completed artifacts have loaded.
+6. Download the manifest, summary, and planner ledgers as JSON.
+7. Reveal benchmark hidden truth only after all completed artifacts have loaded.
 
 See [the demo guide](docs/demo-guide.md) for how to interpret the page.
 
@@ -125,6 +132,7 @@ could connect their artifacts; v0 has no runtime dependency.
 - [Reproducibility](docs/reproducibility.md)
 - [Limitations](docs/limitations.md)
 - [References and attribution](docs/references.md)
+- [Real CV reference data](docs/real-cv-reference.md)
 
 ## Status and safety
 

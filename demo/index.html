@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Replay and compare simulated scientific experiment-selection campaigns.">
+  <meta name="description" content="See a real cyclic-voltammogram, then replay how three experiment-selection policies identify a hidden response mechanism.">
   <title>Scientific Discovery Flight Simulator</title>
   <link rel="stylesheet" href="/styles.css">
   <script src="/app.js" defer></script>
@@ -13,29 +13,137 @@
 
   <header class="site-header">
     <div class="shell">
-      <p class="eyebrow">Evidence-Driven Discovery Sandbox</p>
-      <h1>Scientific Discovery Flight Simulator</h1>
+      <p class="eyebrow">A visible CV experiment-selection benchmark</p>
+      <h1>Which CV experiment should we run next?</h1>
       <p class="lede">
-        Compare how experiment-selection policies behave under one frozen synthetic world,
-        budget, noise schedule, and failure schedule.
+        Start with a published all-iron flow-battery voltammogram. Then watch three policies choose
+        scan rates, receive simulated current responses, and decide whether the hidden virtual
+        sample is diffusion-controlled, surface-controlled, or mixed.
       </p>
     </div>
   </header>
 
   <div class="simulation-banner" role="note">
     <span aria-hidden="true">◆</span>
-    <strong>SIMULATED RUN — NOT A LAB MEASUREMENT</strong>
+    <strong>SIMULATED RUN — NOT A LAB MEASUREMENT · REAL CV REFERENCE LABELED BELOW</strong>
   </div>
 
   <main id="main" class="shell" tabindex="-1">
     <p id="load-status" class="load-status" role="status" aria-live="polite">
-      Loading frozen artifacts…
+      Loading the published CV reference and frozen simulation artifacts…
     </p>
+
+    <section class="panel experiment-brief" aria-labelledby="brief-heading">
+      <div class="section-heading">
+        <div>
+          <p class="section-number">01 — what is being measured?</p>
+          <h2 id="brief-heading">Potential goes in. Current comes out.</h2>
+        </div>
+      </div>
+      <p class="section-intro">
+        Cyclic voltammetry sweeps the working-electrode potential forward and back while measuring
+        current. The resulting current–potential curve is the CV. Its shape and how its peak current
+        changes with scan rate can help distinguish transport and surface-response hypotheses.
+      </p>
+      <div class="fact-grid">
+        <article><b>Physical sample</b><span>A named all-iron RFB anolyte</span></article>
+        <article><b>Instrument</b><span>Three-electrode cyclic voltammetry</span></article>
+        <article><b>Controlled input</b><span>Potential sweep and scan rate</span></article>
+        <article><b>Measured output</b><span>Current density versus potential</span></article>
+      </div>
+      <div class="layer-boundary">
+        <div><strong>Real-data layer</strong><span>The first chart is published experimental data.</span></div>
+        <span class="boundary-arrow" aria-hidden="true">→</span>
+        <div><strong>Benchmark layer</strong><span>The policy comparison is a separate synthetic teaching task.</span></div>
+      </div>
+    </section>
+
+    <section class="panel" aria-labelledby="real-cv-heading">
+      <div class="section-heading">
+        <div>
+          <p class="section-number">02 — a real CV experiment</p>
+          <h2 id="real-cv-heading">Change the electrolyte sample and run the published curve</h2>
+        </div>
+        <span class="status-pill experimental-pill">EXPERIMENTAL DATA</span>
+      </div>
+      <p class="section-intro">
+        Choose one published all-iron flow-battery anolyte. The animation makes the physical
+        workflow explicit: remove the previous formulation when needed, rinse, load the next
+        sample, equilibrate, run the potential sweep, and retain the authors’ processed second-cycle
+        curve.
+      </p>
+      <div id="sample-tabs" class="sample-tabs" role="group" aria-label="Choose a real electrolyte sample"></div>
+      <div class="real-lab-grid">
+        <div class="chart-card">
+          <div class="chart-heading">
+            <div><b id="real-sample-name">Loading sample…</b><span id="real-sample-composition"></span></div>
+            <span id="real-protocol" class="mono-note"></span>
+          </div>
+          <svg id="real-cv-chart" class="cv-chart" viewBox="0 0 760 430" role="img" aria-labelledby="real-chart-title real-chart-desc">
+            <title id="real-chart-title">Published cyclic voltammogram</title>
+            <desc id="real-chart-desc">Current density plotted against working-electrode potential for the selected electrolyte.</desc>
+          </svg>
+          <p class="chart-caption">x: potential vs Ag/AgCl/KCl (sat’d) · y: total current density (mA cm⁻²)</p>
+        </div>
+        <aside class="sample-card" aria-labelledby="sample-record-heading">
+          <p class="section-number">sample record</p>
+          <h3 id="sample-record-heading">What is physically in the cell</h3>
+          <dl id="sample-record"></dl>
+        </aside>
+      </div>
+      <div class="workflow-player">
+        <div class="workflow-controls">
+          <button id="lab-play" class="primary-button" type="button">Run experiment step by step</button>
+          <button id="lab-next" class="tab-button" type="button">Next step</button>
+          <button id="lab-reset" class="tab-button" type="button">Reset</button>
+        </div>
+        <p id="lab-narration" class="workflow-narration" role="status" aria-live="polite"></p>
+        <ol id="lab-workflow" class="lab-workflow"></ol>
+      </div>
+      <p class="data-credit">
+        Published, author-processed experimental data: Engler, Stich, Baumer &amp; Bund,
+        <a href="https://doi.org/10.5281/zenodo.15730784" target="_blank" rel="noreferrer">Zenodo 10.5281/zenodo.15730784</a>,
+        CC BY 4.0. The authors report a 0 to −1.2 V sweep at 10 mV/s for these records; the source
+        curve contains real measured points and is not generated by this demo.
+      </p>
+    </section>
+
+    <section class="panel" aria-labelledby="task-heading">
+      <div class="section-heading">
+        <div>
+          <p class="section-number">03 — the synthetic decision task</p>
+          <h2 id="task-heading">One virtual sample; choose the next scan rate</h2>
+        </div>
+        <span class="status-pill">SYNTHETIC BENCHMARK</span>
+      </div>
+      <p class="section-intro">
+        The benchmark does not reuse the published curve above. It creates one unnamed virtual
+        sample with a hidden current-scaling mechanism. Each policy may request scan rates from
+        5–500 mV/s. It sees noisy normalized responses, updates three probabilities, and stops when
+        sufficiently confident or out of budget.
+      </p>
+      <div class="hypothesis-grid">
+        <article><span class="curve-key diffusion"></span><b>Diffusion</b><code>response ∝ √scan rate</code></article>
+        <article><span class="curve-key surface"></span><b>Surface</b><code>response ∝ scan rate</code></article>
+        <article><span class="curve-key mixed"></span><b>Mixed</b><code>response = both contributions</code></article>
+      </div>
+      <div class="process-strip" aria-label="Synthetic campaign process">
+        <span>1. Policy selects scan rate</span><i aria-hidden="true">→</i>
+        <span>2. Validator checks 5–500 mV/s</span><i aria-hidden="true">→</i>
+        <span>3. Virtual instrument measures</span><i aria-hidden="true">→</i>
+        <span>4. Beliefs update</span><i aria-hidden="true">→</i>
+        <span>5. Continue or stop</span>
+      </div>
+      <p class="trust-note">
+        No physical sample is changed inside this synthetic campaign: all scan rates probe the same
+        virtual sample. Sample replacement belongs to the real multi-formulation workflow above.
+      </p>
+    </section>
 
     <section class="panel identity" aria-labelledby="identity-heading">
       <div class="section-heading">
         <div>
-          <p class="section-number">01 — run identity</p>
+          <p class="section-number">04 — run identity</p>
           <h2 id="identity-heading">Same test, visible contract</h2>
         </div>
         <span id="run-state" class="status-pill" data-state="loading">LOADING</span>
@@ -50,13 +158,13 @@
     <section class="panel" aria-labelledby="comparison-heading">
       <div class="section-heading">
         <div>
-          <p class="section-number">02 — planner comparison</p>
-          <h2 id="comparison-heading">Different policies, separate outcomes</h2>
+          <p class="section-number">05 — planner comparison</p>
+          <h2 id="comparison-heading">How many virtual experiments did each policy need?</h2>
         </div>
       </div>
       <p class="section-intro">
-        No opaque overall score: scientific outcome, costs, validation, and failure recovery remain
-        separate. A simpler planner matching a more complex one is a meaningful result.
+        Read the cards first: each one states the final mechanism, whether it was correct, and the
+        number of experiments used. The detailed metric table remains below for audit.
       </p>
       <div id="planner-cards" class="planner-cards" aria-label="Planner summary cards"></div>
       <div class="table-scroll" tabindex="0" aria-label="Scrollable planner comparison table">
@@ -71,8 +179,8 @@
     <section class="panel" aria-labelledby="replay-heading">
       <div class="section-heading">
         <div>
-          <p class="section-number">03 — evidence replay</p>
-          <h2 id="replay-heading">Inspect every decision and cost</h2>
+          <p class="section-number">06 — step-by-step policy replay</p>
+          <h2 id="replay-heading">Watch the virtual experiment unfold</h2>
         </div>
       </div>
       <p class="section-intro">
@@ -87,6 +195,25 @@
         tabindex="0"
       >
         <div id="replay-summary" class="replay-summary"></div>
+        <div class="strategy-player">
+          <div class="strategy-chart-wrap">
+            <svg id="strategy-chart" class="cv-chart" viewBox="0 0 760 410" role="img" aria-labelledby="strategy-chart-title strategy-chart-desc">
+              <title id="strategy-chart-title">Candidate response mechanisms and revealed measurements</title>
+              <desc id="strategy-chart-desc">The three public response hypotheses and the observations revealed up to the selected experiment step.</desc>
+            </svg>
+          </div>
+          <aside class="strategy-step-card">
+            <p class="section-number">current replay step</p>
+            <h3 id="strategy-step-title">Before experiment 1</h3>
+            <p id="strategy-step-copy"></p>
+            <div id="belief-bars" class="belief-bars" aria-label="Current mechanism probabilities"></div>
+            <div class="workflow-controls">
+              <button id="strategy-prev" class="tab-button" type="button">Previous</button>
+              <button id="strategy-next" class="primary-button" type="button">Next experiment</button>
+              <button id="strategy-play" class="tab-button" type="button">Play</button>
+            </div>
+          </aside>
+        </div>
         <ol id="event-list" class="event-list" aria-live="polite"></ol>
       </div>
     </section>
@@ -94,7 +221,7 @@
     <section class="panel" aria-labelledby="downloads-heading">
       <div class="section-heading">
         <div>
-          <p class="section-number">04 — artifacts</p>
+          <p class="section-number">07 — artifacts</p>
           <h2 id="downloads-heading">Inspect the source JSON</h2>
         </div>
       </div>
@@ -110,7 +237,7 @@
     <section class="panel reveal" aria-labelledby="reveal-heading">
       <div class="section-heading">
         <div>
-          <p class="section-number">05 — post-run reveal</p>
+          <p class="section-number">08 — post-run reveal</p>
           <h2 id="reveal-heading">Benchmark hidden truth</h2>
         </div>
       </div>
