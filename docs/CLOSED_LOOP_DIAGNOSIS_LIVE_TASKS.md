@@ -127,7 +127,8 @@ it does not replace or weaken the existing provenance, model-boundary, or fail-c
 - [x] Full automated and adversarial leakage suite passed: 175 tests, plus Node syntax and Ruff.
 - [x] Visible desktop/mobile browser review passed at desktop, 390 px, and 320 px widths.
 - [x] Independent final QA approved.
-- [ ] Local commit created; production deployment and push remain separate actions.
+- [x] Local implementation commit created (`3660cf1`); production deployment and push remain
+  separate actions.
 
 ## Release boundary
 
