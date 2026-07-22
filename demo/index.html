@@ -3,37 +3,139 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Replay a published cyclic-voltammetry workflow, then compare three experiment-selection policies in a separate synthetic benchmark.">
+  <meta name="description" content="Run a transparent synthetic closed-loop CV diagnosis, then inspect the supporting published workflow and saved planner benchmark.">
   <title>Scientific Discovery Flight Simulator</title>
   <link rel="stylesheet" href="/styles.css">
   <script src="/app.js" defer></script>
 </head>
 <body>
-  <a class="skip-link" href="#main">Skip to the CV workbench</a>
+  <a class="skip-link" href="#diagnosis-workbench">Skip to closed-loop diagnosis</a>
 
   <header class="site-header">
     <div class="shell header-inner">
       <div>
-        <p class="eyebrow">Scientific Discovery Flight Simulator · CV workbench</p>
-        <h1>How a CV experiment becomes evidence</h1>
+        <p class="eyebrow">Scientific Discovery Flight Simulator · closed-loop CV diagnosis</p>
+        <h1>Why did this CV peak separation grow?</h1>
       </div>
-      <p class="header-note">See the physical measurement first. Then cross into a separate, saved policy replay.</p>
+      <p class="header-note">Test five synthetic explanations by running the next useful experiment under a fixed budget.</p>
       <a id="tempo-study-link" class="tempo-study-link" href="/tempo/">Open the TEMPO multi-sample CV evidence study →</a>
     </div>
-    <div class="shell first-planner-preview" aria-label="Separate synthetic planner preview">
-      <b>Separate synthetic preview</b>
-      <span><i aria-hidden="true">▦</i> Fixed Grid · regular</span>
-      <span><i aria-hidden="true">◎</i> Information Gain · targeted</span>
-      <span><i aria-hidden="true">✦</i> Random · scattered</span>
+    <div class="shell first-planner-preview" aria-label="Closed-loop diagnosis summary">
+      <b>One verified loop</b>
+      <span><i aria-hidden="true">◇</i> five hypotheses</span>
+      <span><i aria-hidden="true">ƒ</i> server recommendation</span>
+      <span><i aria-hidden="true">◎</i> evidence update</span>
     </div>
   </header>
 
   <nav class="provenance-rail" aria-label="Data layers">
+    <a href="#diagnosis-workbench"><span aria-hidden="true">◇</span> DIAGNOSIS — synthetic closed loop</a>
     <a href="#real-workbench"><span aria-hidden="true">◆</span> REAL — published, author-processed CV data</a>
     <a href="#synthetic-benchmark"><span aria-hidden="true">◇</span> SYNTHETIC — saved policy replay, not a lab measurement</a>
   </nav>
 
   <main id="main" class="shell" tabindex="-1">
+    <section id="diagnosis-workbench" class="panel diagnosis-workbench" aria-labelledby="diagnosis-heading">
+      <div class="diagnosis-question-strip">
+        <div>
+          <p class="section-number">01 — closed-loop CV diagnosis</p>
+          <h2 id="diagnosis-heading">Why did peak separation grow relative to the frozen healthy control?</h2>
+          <p class="section-intro">Test competing explanations by choosing the next useful experiment under a fixed budget.</p>
+        </div>
+        <span class="status-pill synthetic-pill">◇ SYNTHETIC EXPERIMENT · NOT A LAB MEASUREMENT</span>
+      </div>
+      <p class="diagnosis-nonclaim">Saved synthetic diagnosis run · not a diagnosis of a real sample · no hardware control</p>
+      <p id="diagnosis-status" class="diagnosis-status" role="status" aria-live="polite">Loading committed diagnosis scenario…</p>
+      <div id="diagnosis-error" class="diagnosis-error" role="alert" tabindex="-1" hidden></div>
+
+      <div class="diagnosis-overview">
+        <div>
+          <b>The scientific question</b>
+          <p id="diagnosis-question">What best explains the increase in apparent peak separation from the frozen synthetic healthy/control comparator to the initial abnormal synthetic CV?</p>
+          <p id="diagnosis-comparator-summary" class="mono-note">Waiting for verified comparator and trigger…</p>
+        </div>
+        <div class="diagnosis-budget" aria-label="Experiment budget">
+          <span id="diagnosis-measurement-budget">Budget · —/10 operations left</span>
+          <span id="diagnosis-attempt-budget">Attempts · —/12</span>
+          <small>Failed attempts remain visible and may consume the contract-defined cost.</small>
+        </div>
+      </div>
+
+      <section class="diagnosis-hypotheses" aria-labelledby="diagnosis-hypotheses-heading">
+        <h3 id="diagnosis-hypotheses-heading">Competing explanations</h3>
+        <div id="diagnosis-beliefs" class="diagnosis-beliefs" aria-live="polite">
+          <div class="diagnosis-belief-row"><span>Slow electron-transfer kinetics</span><span class="diagnosis-belief-track"></span><span class="diagnosis-belief-value">—</span></div>
+          <div class="diagnosis-belief-row"><span>Uncompensated resistance</span><span class="diagnosis-belief-track"></span><span class="diagnosis-belief-value">—</span></div>
+          <div class="diagnosis-belief-row"><span>Reference-electrode drift</span><span class="diagnosis-belief-track"></span><span class="diagnosis-belief-value">—</span></div>
+          <div class="diagnosis-belief-row"><span>Electrode fouling</span><span class="diagnosis-belief-track"></span><span class="diagnosis-belief-value">—</span></div>
+          <div class="diagnosis-belief-row"><span>Concentration or preparation error</span><span class="diagnosis-belief-track"></span><span class="diagnosis-belief-value">—</span></div>
+        </div>
+        <p>Working beliefs within five predefined synthetic hypotheses—not probabilities that a real sample has each mechanism.</p>
+      </section>
+
+      <div class="diagnosis-bench">
+        <article class="diagnosis-recommendation-card">
+          <p class="derived-label">ƒ DERIVED FROM CURRENT EVIDENCE</p>
+          <h3>Recommended next experiment</h3>
+          <b id="diagnosis-recommendation">Choosing the next experiment…</b>
+          <dl>
+            <div><dt>Why this experiment</dt><dd id="diagnosis-reason">Waiting for the verified server recommendation.</dd></div>
+            <div><dt>Cost</dt><dd id="diagnosis-cost">—</dd></div>
+          </dl>
+          <button id="diagnosis-run" class="primary-button" type="button" disabled>Run recommended experiment</button>
+          <button id="diagnosis-retry" class="secondary-button" type="button" hidden>Retry identical request</button>
+        </article>
+
+        <article class="diagnosis-chart-card">
+          <div class="chart-heading">
+            <div><p class="synthetic-object-label">◇ SYNTHETIC OBSERVATION</p><h3>Synthetic CV comparison</h3></div>
+          </div>
+          <svg id="diagnosis-chart" class="diagnosis-chart" viewBox="0 0 760 410" role="img" aria-labelledby="diagnosis-chart-title diagnosis-chart-desc">
+            <title id="diagnosis-chart-title">Synthetic cyclic voltammogram comparison</title>
+            <desc id="diagnosis-chart-desc">Verified full synthetic CV arrays are unavailable; no curve is drawn.</desc>
+          </svg>
+          <p class="chart-caption">x: potential vs synthetic SHE / V · y: current / A</p>
+          <div id="diagnosis-curve-table" class="sr-only" aria-label="Text equivalent of verified CV curves"></div>
+          <p>Full curves come from the verified synthetic response. The browser does not reconstruct them from peak markers.</p>
+        </article>
+
+        <article id="diagnosis-result" class="diagnosis-result-card" aria-labelledby="diagnosis-result-heading">
+          <h3 id="diagnosis-result-heading">Result and belief update</h3>
+          <p id="diagnosis-result-copy">Run the recommended experiment to reveal the next saved observation.</p>
+          <div id="diagnosis-belief-delta"></div>
+        </article>
+      </div>
+
+      <section class="diagnosis-timeline-section" aria-labelledby="diagnosis-timeline-heading">
+        <h3 id="diagnosis-timeline-heading">Run timeline</h3>
+        <ol id="diagnosis-timeline" class="diagnosis-timeline"><li>No experiments run yet.</li></ol>
+      </section>
+
+      <details class="diagnosis-supporting">
+        <summary>Supporting Measurements</summary>
+        <p>These measurements may support diagnosis but remain separate from ordinary CV inference.</p>
+        <div class="supporting-grid">
+          <article><b>Independent Ru</b><p>A simulated diagnostic scalar inside this benchmark.</p></article>
+          <article><b>Conductivity</b><p>Calculated only from an independent resistance and calibrated cell constant for the same sample/cell context. It is not inferred from CV.</p><a href="/tempo/#conductivity">Open the conductivity workbench →</a></article>
+        </div>
+      </details>
+
+      <details class="diagnosis-expert">
+        <summary>Expert &amp; audit details <small>Exact state, QC, hashes, replay identity, and post-run limits</small></summary>
+        <pre id="diagnosis-audit">No verified campaign state yet.</pre>
+        <button id="diagnosis-reveal" class="secondary-button" type="button" disabled>Reveal synthetic benchmark truth</button>
+        <p id="diagnosis-reveal-help">Truth remains unavailable until the diagnosis loop reaches a terminal state.</p>
+        <pre id="diagnosis-truth" tabindex="-1" hidden></pre>
+      </details>
+    </section>
+
+    <section class="secondary-experiences" aria-labelledby="secondary-experiences-heading">
+      <p class="section-number">02 — supporting context and prior benchmark</p>
+      <h2 id="secondary-experiences-heading">Go deeper into the measurement and planner replays</h2>
+      <p><b>How a CV experiment becomes evidence</b> remains the organizing question for the supporting physical workflow.</p>
+      <p>The published CV workflow and earlier three-planner benchmark remain available below as separate supporting material. They do not supply evidence to the diagnosis loop above.</p>
+    </section>
+
     <p id="load-status" class="load-status" role="status">
       Loading the published CV reference and verified simulation artifacts…
     </p>

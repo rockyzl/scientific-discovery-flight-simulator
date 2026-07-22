@@ -1,44 +1,55 @@
 # Scientific Discovery Flight Simulator
 
-**Compare how experiment-selection policies behave under the same simulated world, budget,
-constraints, noise, and instrument failures.**
+**Test how a scientific agent chooses the next useful experiment, updates competing explanations,
+and stops under a fixed synthetic budget.**
 
-> **SIMULATED RUN — NOT A LAB MEASUREMENT.** This statement applies to the policy benchmark. A
-> separately labeled chart uses cited, published experimental CV data.
+> **SIMULATED RUN — NOT A LAB MEASUREMENT.** This statement applies to the diagnosis and policy
+> benchmark surfaces. A separately labeled chart uses cited, published experimental CV data.
 
 This repository is an offline, deterministic research prototype for replaying scientific campaigns.
-Its first world is a transparent cyclic-voltammetry (CV) teaching emulator in which a planner must
-choose scan rates that distinguish among diffusion-like, surface-like, and mixed responses. Random,
-fixed-grid, and expected-information-gain policies receive the same experimental contract and are
-scored from separate, auditable evidence ledgers.
+Its flagship world is a closed-loop cyclic-voltammetry (CV) diagnosis benchmark: an agent must
+distinguish five predefined explanations for enlarged apparent peak separation by selecting
+experiments under fixed attempt and measurement budgets. The server returns full synthetic CV
+curves or explicit failures, updates a five-hypothesis belief vector, recommends the next action,
+and records an auditable evidence ledger.
+
+The earlier random, fixed-grid, and expected-information-gain scan-rate comparison remains below
+the flagship loop as a separate policy-replay teaching example.
 
 ## The one honest claim
 
-This project can compare the behavior of the included experiment-selection policies under a fixed,
-synthetic benchmark contract. It records every proposal, validation decision, simulated observation,
-QC flag, cost, belief update, and stopping decision. Failure-detection and recovery metrics are
-derived from that ledger so the comparison can be inspected and repeated.
+This project can test the included closed-loop diagnosis policy and compare the included
+experiment-selection policies under fixed synthetic benchmark contracts. It records every proposal,
+validation decision, simulated observation, QC flag, cost, belief update, and stopping decision.
+Failure-detection and recovery behavior can therefore be inspected and repeated.
 
 It does **not** show that an agent can make discoveries in a real laboratory. It does not control
 instruments, generate laboratory measurements, validate a mechanistic CV model, or establish general
 scientific reasoning.
 
+The restricted-v1 Gaussian likelihood model is intentionally narrow and can produce an extremely
+sharp posterior after one synthetic observation. Those values are working beliefs inside five
+predefined toy hypotheses, not calibrated confidence about a real electrochemical system.
+
 ## What the demo shows
 
-The browser demo reads a completed artifact directory and a bundled, cited real-data reference; it
-does not control an instrument or run a new laboratory experiment.
+The browser demo serves a private local campaign state plus a completed artifact directory and a
+bundled, cited real-data reference. It does not control an instrument or run a laboratory
+experiment.
 
-1. Inspect three published all-iron RFB anolyte CV curves and play the physical sample-change and
-   measurement workflow step by step.
-2. See the exact boundary between that real-data reference and the separate synthetic mechanism
-   benchmark.
-3. Compare `random`, `fixed_grid`, and `information_gain`: selected scan rate, simulated response,
-   changing mechanism probabilities, final answer, and attempts used.
-4. Inspect each campaign event in order, including rejected requests and injected failures.
-5. See the scenario, budget, public planner seed, private-seed commitments, versions, and artifact
-   identity.
-6. Download the manifest, summary, and planner ledgers as JSON.
-7. Reveal benchmark hidden truth only after all completed artifacts have loaded.
+1. Start from one visible scientific question: why did apparent CV peak separation grow relative to
+   a frozen healthy/control comparator?
+2. Compare five predefined synthetic explanations and see the remaining operation and attempt
+   budgets.
+3. Run the server-recommended experiment, inspect a complete 122-point synthetic CV or an explicit
+   failure, and see how the evidence changes the working beliefs.
+4. Follow every experiment, failure, cost, belief update, and stopping decision in the campaign
+   timeline and expert audit view.
+5. Reveal the hidden synthetic cause only after the campaign is terminal and verify it against the
+   original cryptographic commitment.
+6. Inspect three published all-iron RFB anolyte CV curves and play the physical sample-change and
+   measurement workflow step by step in the separate real-context section.
+7. Compare `random`, `fixed_grid`, and `information_gain` in the separate saved policy replay.
 
 See [the demo guide](docs/demo-guide.md) for how to interpret the page.
 
@@ -58,8 +69,9 @@ python -m discovery_flight_simulator.cli compare \
 python demo/serve.py --artifacts outputs/cv-demo
 ```
 
-Open <http://127.0.0.1:8000>. The server exposes only the static demo and files beneath the selected
-artifact directory.
+Open <http://127.0.0.1:8000>. The server exposes the static demo, files beneath the selected artifact
+directory, and a local closed-loop diagnosis API. Diagnosis state is stored outside the public
+artifact directory, and routed API responses use `Cache-Control: no-store`.
 
 Expected artifacts:
 
@@ -76,17 +88,19 @@ outputs/cv-demo/
 ## Architecture at a glance
 
 ```text
-public campaign state ──> planner ──> protocol validator
-                                              │
-                                              ▼
-private scenario truth ──> campaign environment ──> observation
-          │                                            │
-          └──────────── evaluator <── evidence ledger ─┘
+public diagnosis state ──> recommendation policy ──> protocol validator
+                                                       │
+                                                       ▼
+private committed truth ──> synthetic lab world ──> observation / failure
+          │                                                   │
+          └──────── belief update + stop rule <── evidence ledger
 ```
 
-The planner receives only public state. Hidden mechanism parameters, noiseless response, future
-failure schedule, and evaluator remain private. See [architecture](docs/architecture.md) and the
-[benchmark contract](docs/benchmark-contract.md).
+The diagnosis UI receives only public campaign state. The hidden cause, simulator seeds, reveal
+nonce, and future failure schedule remain server-side until an explicit post-terminal reveal. The
+older planner comparison follows the same public/private separation. See
+[the closed-loop diagnosis contract](docs/design/closed-loop-diagnosis-contract.md),
+[architecture](docs/architecture.md), and the earlier [benchmark contract](docs/benchmark-contract.md).
 
 ## Reproduce and inspect
 

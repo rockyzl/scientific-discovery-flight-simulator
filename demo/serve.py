@@ -11,6 +11,7 @@ import sys
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from typing import Protocol
 from urllib.parse import unquote, urlsplit
 
 # Direct `python demo/serve.py` execution places demo/, not the repository's src/, on sys.path.
@@ -35,6 +36,8 @@ STATIC_ROUTES = {
 TEMPO_REFERENCE_PATH = DEMO_DIR / "data" / "tempo" / "reference-v1.json"
 TEMPO_REFERENCE_ROUTE = "/tempo/reference-v1.json"
 MAX_TEMPO_REQUEST_BYTES = 2_000_000
+MAX_DIAGNOSIS_REQUEST_BYTES = 2_000_000
+DIAGNOSIS_API_PREFIX = "/api/v1/closed-loop"
 REQUIRED_ARTIFACTS = (
     "manifest.json",
     "summary.json",
@@ -44,12 +47,33 @@ REQUIRED_ARTIFACTS = (
 )
 
 
+class DiagnosisServiceProtocol(Protocol):
+    """The HTTP adapter's deliberately narrow dependency on the diagnosis core."""
+
+    def get_scenario(self) -> tuple[int, bytes]: ...
+
+    def create_campaign(self, raw_body: bytes) -> tuple[int, bytes]: ...
+
+    def get_campaign(self, campaign_id: str) -> tuple[int, bytes]: ...
+
+    def act(self, campaign_id: str, raw_body: bytes) -> tuple[int, bytes]: ...
+
+    def stop(self, campaign_id: str, raw_body: bytes) -> tuple[int, bytes]: ...
+
+    def get_ledger(self, campaign_id: str) -> tuple[int, bytes]: ...
+
+    def reveal(self, campaign_id: str, raw_body: bytes) -> tuple[int, bytes]: ...
+
+
 class DemoRequestHandler(BaseHTTPRequestHandler):
     """Serve known static files and files confined beneath one artifact root."""
 
     artifact_root: Path
+    diagnosis_service: DiagnosisServiceProtocol
 
     def do_GET(self) -> None:  # noqa: N802 - stdlib handler API
+        if self._serve_diagnosis_get(send_body=True):
+            return
         self._serve(send_body=True)
 
     def do_HEAD(self) -> None:  # noqa: N802 - stdlib handler API
@@ -57,6 +81,31 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
 
     def do_POST(self) -> None:  # noqa: N802 - stdlib handler API
         path = urlsplit(self.path).path
+        diagnosis_route = self._diagnosis_post_route(path)
+        if diagnosis_route is not None:
+            try:
+                raw_body = self._read_raw_diagnosis_request()
+            except ValueError as exc:
+                self._send_diagnosis_transport_error(
+                    HTTPStatus.BAD_REQUEST,
+                    "INVALID_REQUEST_ENVELOPE",
+                    str(exc),
+                )
+                return
+            method, campaign_id = diagnosis_route
+            if campaign_id is None:
+                status, body = method(raw_body)
+            else:
+                status, body = method(campaign_id, raw_body)
+            self._send_diagnosis_response(status, body)
+            return
+        if path.startswith(DIAGNOSIS_API_PREFIX):
+            self._send_diagnosis_transport_error(
+                HTTPStatus.NOT_FOUND,
+                "NOT_FOUND",
+                "Diagnosis endpoint was not found.",
+            )
+            return
         if path not in {"/api/tempo/analyze", "/api/tempo/conductivity"}:
             self.send_error(HTTPStatus.NOT_FOUND, "Not found")
             return
@@ -85,8 +134,107 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
             return
         self._send_json(result, HTTPStatus.OK)
 
+    def _serve_diagnosis_get(self, *, send_body: bool) -> bool:
+        parsed = urlsplit(self.path)
+        if parsed.query or parsed.fragment:
+            return False
+        path = parsed.path
+        if path == f"{DIAGNOSIS_API_PREFIX}/scenario":
+            status, body = self.diagnosis_service.get_scenario()
+        else:
+            segments = path.split("/")
+            expected = ["", "api", "v1", "closed-loop", "campaigns"]
+            if segments[:5] != expected or len(segments) not in {6, 7} or not segments[5]:
+                return False
+            campaign_id = unquote(segments[5], errors="strict")
+            if "/" in campaign_id or "\x00" in campaign_id:
+                return False
+            if len(segments) == 6:
+                status, body = self.diagnosis_service.get_campaign(campaign_id)
+            elif segments[6] == "ledger":
+                status, body = self.diagnosis_service.get_ledger(campaign_id)
+            else:
+                return False
+        self._send_diagnosis_response(status, body, send_body=send_body)
+        return True
+
+    def _diagnosis_post_route(self, path: str):
+        if urlsplit(self.path).query or urlsplit(self.path).fragment:
+            return None
+        if path == f"{DIAGNOSIS_API_PREFIX}/campaigns":
+            return self.diagnosis_service.create_campaign, None
+        segments = path.split("/")
+        expected = ["", "api", "v1", "closed-loop", "campaigns"]
+        if segments[:5] != expected or len(segments) != 7 or not segments[5]:
+            return None
+        campaign_id = unquote(segments[5], errors="strict")
+        if "/" in campaign_id or "\x00" in campaign_id:
+            return None
+        method = {
+            "actions": self.diagnosis_service.act,
+            "stop": self.diagnosis_service.stop,
+            "reveal": self.diagnosis_service.reveal,
+        }.get(segments[6])
+        return None if method is None else (method, campaign_id)
+
+    def _read_raw_diagnosis_request(self) -> bytes:
+        raw_length = self.headers.get("Content-Length")
+        try:
+            length = int(raw_length or "0")
+        except ValueError as exc:
+            raise ValueError("valid Content-Length is required") from exc
+        if length < 0 or length > MAX_DIAGNOSIS_REQUEST_BYTES:
+            raise ValueError("request body size is invalid")
+        raw_body = self.rfile.read(length)
+        if len(raw_body) != length:
+            raise ValueError("request body ended before Content-Length bytes were received")
+        return raw_body
+
+    def _send_diagnosis_transport_error(
+        self,
+        status: HTTPStatus,
+        code: str,
+        message: str,
+        *,
+        send_body: bool = True,
+    ) -> None:
+        from discovery_flight_simulator.diagnosis import transport_error_envelope
+
+        self._send_diagnosis_response(
+            int(status),
+            transport_error_envelope(code, message),
+            send_body=send_body,
+        )
+
+    def _send_diagnosis_response(
+        self,
+        status: int,
+        body: bytes,
+        *,
+        send_body: bool = True,
+    ) -> None:
+        """Relay core-owned status and JSON bytes without parsing or reserialization."""
+
+        self.send_response(status)
+        self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.send_header("Content-Length", str(len(body)))
+        self.send_header("Cache-Control", "no-store")
+        self.send_header("X-Content-Type-Options", "nosniff")
+        self.send_header("Referrer-Policy", "no-referrer")
+        self.end_headers()
+        if send_body:
+            self.wfile.write(body)
+
     def _serve(self, *, send_body: bool) -> None:
         raw_path = urlsplit(self.path).path
+        if raw_path.startswith(DIAGNOSIS_API_PREFIX):
+            self._send_diagnosis_transport_error(
+                HTTPStatus.NOT_FOUND,
+                "NOT_FOUND",
+                "Diagnosis endpoint was not found.",
+                send_body=send_body,
+            )
+            return
         try:
             path = unquote(raw_path, errors="strict")
         except UnicodeDecodeError:
@@ -259,12 +407,20 @@ def create_server(
     artifact_root: Path,
     host: str = "127.0.0.1",
     port: int = 8000,
+    *,
+    diagnosis_service: DiagnosisServiceProtocol | None = None,
+    diagnosis_state_dir: Path | None = None,
 ) -> ThreadingHTTPServer:
     root = validate_artifact_root(artifact_root)
+    if diagnosis_service is None:
+        from discovery_flight_simulator.diagnosis import DiagnosisService
+
+        private_state = diagnosis_state_dir or (root.parent / ".closed-loop-diagnosis-state")
+        diagnosis_service = DiagnosisService(private_state)
     handler = type(
         "ConfiguredDemoRequestHandler",
         (DemoRequestHandler,),
-        {"artifact_root": root},
+        {"artifact_root": root, "diagnosis_service": diagnosis_service},
     )
     return ThreadingHTTPServer((host, port), handler)
 

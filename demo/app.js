@@ -15,6 +15,51 @@ const ARTIFACTS = {
   information_gain: "/artifacts/ledgers/information_gain.json",
 };
 const SVG_NS = "http://www.w3.org/2000/svg";
+const DIAGNOSIS_API = "/api/v1/closed-loop";
+const DIAGNOSIS_ENVELOPE_FIELDS = [
+  "schema_version", "response_id", "response_hash", "request_id", "idempotency_input_hash",
+  "scenario_id", "campaign_id", "previous_state_version", "state_version",
+  "previous_ledger_hash", "ledger_hash", "status", "payload",
+];
+const DIAGNOSIS_RECOMMENDATION_FIELDS = [
+  "recommendation_id", "state_version", "planner_id", "planner_version", "operation", "controls",
+  "reason_code", "reason_text", "attempt_cost", "measurement_cost",
+  "expected_information_gain_nats", "action_input_hash",
+];
+const DIAGNOSIS_HYPOTHESIS_ORDER = [
+  "slow_kinetics", "uncompensated_resistance", "reference_drift", "electrode_fouling",
+  "concentration_preparation_error",
+];
+const DIAGNOSIS_STOP_COPY = {
+  budget_exhausted: "Stopped · attempt or measurement budget exhausted.",
+  confident_diagnosis: "Stopped · confident diagnosis gate satisfied.",
+  low_expected_information: "Stopped · expected information is below the threshold.",
+};
+const DIAGNOSIS_REJECTION_MESSAGES = {
+  INVALID_RECOMMENDATION: "Recommendation identity does not match the current campaign state.",
+  INVALID_OPERATION: "Operation is not allowed by this scenario.",
+  INVALID_CONTROLS: "Controls do not match the operation contract.",
+  INELIGIBLE_ACTION: "The requested experiment is not currently eligible.",
+  STOP_RULE_NOT_SATISFIED: "No stop rule is satisfied.",
+};
+const DIAGNOSIS_ERROR_CODES = new Set([
+  "MALFORMED_JSON", "INVALID_REQUEST_ENVELOPE", ...Object.keys(DIAGNOSIS_REJECTION_MESSAGES),
+  "NOT_FOUND", "STALE_STATE", "TERMINAL_STATE", "IDEMPOTENCY_CONFLICT",
+  "REVEAL_NOT_AVAILABLE", "REVEAL_ALREADY_COMPLETED", "INTERNAL_ERROR",
+]);
+const DIAGNOSIS_SECRET_KEYS = new Set([
+  "cause", "world_seed", "noise_seed", "failure_seed", "reveal_nonce", "hidden_truth",
+  "seed_bundle", "commitment_payload",
+]);
+const DIAGNOSIS_ACTIONS = [
+  ...[5, 10, 25, 50, 100, 200].map((scan_rate_mv_s) => ({ operation: "repeat_cv", controls: { scan_rate_mv_s } })),
+  { operation: "measure_ru", controls: {} },
+  { operation: "check_reference", controls: {} },
+  { operation: "run_blank", controls: {} },
+  { operation: "dilute_and_repeat", controls: { dilution_factor: 0.5, scan_rate_mv_s: 25 } },
+  { operation: "clean_and_repeat", controls: { scan_rate_mv_s: 25 } },
+  { operation: "run_control_sample", controls: { scan_rate_mv_s: 25 } },
+];
 
 const LAB_STEPS = [
   {
@@ -88,6 +133,16 @@ const state = {
   strategyTimer: null,
   reducedMotion: false,
   electrodeTrigger: null,
+};
+
+const diagnosis = {
+  scenario: null,
+  campaign: null,
+  events: [],
+  pending: null,
+  epoch: 0,
+  busy: false,
+  revealed: false,
 };
 
 const byId = (id) => document.getElementById(id);
@@ -1234,6 +1289,774 @@ function revealTruth() {
   announce("Synthetic truth revealed. It is not experimental truth.");
 }
 
+function diagnosisAssert(condition, message) {
+  if (!condition) throw new Error(message);
+}
+
+function diagnosisExactObject(value, fields, label) {
+  diagnosisAssert(value && typeof value === "object" && !Array.isArray(value), `${label} must be an object`);
+  const actual = Object.keys(value).sort();
+  const expected = [...fields].sort();
+  diagnosisAssert(actual.length === expected.length && actual.every((key, index) => key === expected[index]), `${label} has an unknown or missing field`);
+}
+
+function diagnosisCanonicalJson(value) {
+  if (value === null || typeof value === "boolean" || typeof value === "string") return JSON.stringify(value);
+  if (typeof value === "number") {
+    diagnosisAssert(Number.isFinite(value), "Canonical JSON rejects non-finite numbers");
+    return JSON.stringify(value);
+  }
+  if (Array.isArray(value)) return `[${value.map(diagnosisCanonicalJson).join(",")}]`;
+  diagnosisAssert(value && typeof value === "object", "Canonical JSON rejects unsupported values");
+  return `{${Object.keys(value).sort().map((key) => `${JSON.stringify(key)}:${diagnosisCanonicalJson(value[key])}`).join(",")}}`;
+}
+
+async function diagnosisSha256Bytes(bytes) {
+  diagnosisAssert(window.crypto?.subtle, "Web Crypto is required to verify diagnosis evidence");
+  const digest = await window.crypto.subtle.digest("SHA-256", bytes);
+  return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
+function diagnosisSha256Text(value) {
+  return diagnosisSha256Bytes(new TextEncoder().encode(value));
+}
+
+function diagnosisWithout(object, field) {
+  return Object.fromEntries(Object.entries(object).filter(([key]) => key !== field));
+}
+
+function diagnosisHasSecretKey(value) {
+  if (!value || typeof value !== "object") return false;
+  if (Array.isArray(value)) return value.some(diagnosisHasSecretKey);
+  return Object.entries(value).some(([key, child]) => DIAGNOSIS_SECRET_KEYS.has(key) || diagnosisHasSecretKey(child));
+}
+
+function diagnosisValidateBeliefs(beliefs, label) {
+  diagnosisAssert(Array.isArray(beliefs) && beliefs.length === 5, `${label} must contain five values`);
+  beliefs.forEach((value) => diagnosisAssert(Number.isFinite(value) && value >= 0 && value <= 1, `${label} contains an invalid value`));
+  diagnosisAssert(Math.abs(beliefs.reduce((sum, value) => sum + value, 0) - 1) <= 1e-12, `${label} does not sum to one`);
+}
+
+function diagnosisValidatePeak(peak, label) {
+  diagnosisExactObject(peak, ["Epa_v", "Epc_v", "ipa_a", "ipc_a", "midpoint_v", "delta_Ep_v", "ipa_abs_over_ipc_abs"], label);
+  Object.values(peak).forEach((value) => diagnosisAssert(Number.isFinite(value), `${label} contains a non-finite value`));
+}
+
+async function diagnosisValidateCurve(curve, label) {
+  diagnosisExactObject(curve, ["point_count", "potential_reference", "potential_unit", "current_unit", "potential_v", "current_a", "sweep_direction", "curve_hash"], label);
+  diagnosisAssert(curve.point_count === 122 && curve.potential_reference === "synthetic_SHE" && curve.potential_unit === "V" && curve.current_unit === "A", `${label} metadata is invalid`);
+  diagnosisAssert(curve.potential_v.length === 122 && curve.current_a.length === 122 && curve.sweep_direction.length === 122, `${label} arrays must contain 122 points`);
+  curve.current_a.forEach((value) => diagnosisAssert(Number.isFinite(value), `${label} current is invalid`));
+  curve.potential_v.forEach((value, index) => {
+    const expected = index <= 60 ? 0.650 + 0.005 * index : 0.950 - 0.005 * (index - 61);
+    const direction = index <= 60 ? "forward" : "reverse";
+    diagnosisAssert(Number.isFinite(value) && Math.abs(value - expected) <= 1e-12, `${label} potential grid is invalid`);
+    diagnosisAssert(curve.sweep_direction[index] === direction, `${label} sweep direction is invalid`);
+  });
+  const expectedHash = await diagnosisSha256Text(diagnosisCanonicalJson(diagnosisWithout(curve, "curve_hash")));
+  diagnosisAssert(expectedHash === curve.curve_hash, `${label} hash does not verify`);
+}
+
+function diagnosisExtractPeak(curve) {
+  let pa = 0;
+  let pc = 61;
+  for (let index = 1; index <= 60; index += 1) if (curve.current_a[index] > curve.current_a[pa]) pa = index;
+  for (let index = 62; index < 122; index += 1) if (curve.current_a[index] < curve.current_a[pc]) pc = index;
+  const Epa = curve.potential_v[pa];
+  const Epc = curve.potential_v[pc];
+  const ipa = curve.current_a[pa];
+  const ipc = curve.current_a[pc];
+  return { Epa_v: Epa, Epc_v: Epc, ipa_a: ipa, ipc_a: ipc, midpoint_v: (Epa + Epc) / 2, delta_Ep_v: Epa - Epc, ipa_abs_over_ipc_abs: Math.abs(ipa) / Math.abs(ipc) };
+}
+
+function diagnosisValidatePeakAgainstCurve(peak, curve, label) {
+  const extracted = diagnosisExtractPeak(curve);
+  ["Epa_v", "Epc_v", "midpoint_v", "delta_Ep_v", "ipa_abs_over_ipc_abs"].forEach((field) => diagnosisAssert(Math.abs(peak[field] - extracted[field]) <= 1e-12, `${label} ${field} fails curve QC`));
+  ["ipa_a", "ipc_a"].forEach((field) => diagnosisAssert(Math.abs(peak[field] - extracted[field]) <= 1e-18, `${label} ${field} fails curve QC`));
+}
+
+async function diagnosisValidateObservation(observation, label) {
+  diagnosisExactObject(observation, ["kind", "feature_name", "value", "unit", "peak", "curve", "qc_status", "evidence_hash"], label);
+  diagnosisAssert(observation.qc_status === "passed", `${label} QC status is invalid`);
+  if (observation.kind === "cv") {
+    diagnosisAssert(observation.feature_name === null && observation.value === null && observation.unit === null && observation.peak && observation.curve, `${label} CV nullability is invalid`);
+    diagnosisValidatePeak(observation.peak, `${label}.peak`);
+    await diagnosisValidateCurve(observation.curve, `${label}.curve`);
+    diagnosisValidatePeakAgainstCurve(observation.peak, observation.curve, label);
+  } else {
+    const pairs = { ru_ohm: "ohm", reference_offset_v: "V", blank_current_a: "A", recovery_ratio: "ratio", control_delta_Ep_v: "V" };
+    diagnosisAssert(observation.kind === "scalar" && pairs[observation.feature_name] === observation.unit && Number.isFinite(observation.value), `${label} scalar shape is invalid`);
+    diagnosisAssert(observation.peak === null && observation.curve === null, `${label} scalar must not carry a curve`);
+  }
+  const expectedHash = await diagnosisSha256Text(diagnosisCanonicalJson(diagnosisWithout(observation, "evidence_hash")));
+  diagnosisAssert(expectedHash === observation.evidence_hash, `${label} evidence hash does not verify`);
+}
+
+function diagnosisValidateRecommendation(recommendation) {
+  if (recommendation === null) return;
+  diagnosisExactObject(recommendation, DIAGNOSIS_RECOMMENDATION_FIELDS, "Recommendation");
+  diagnosisAssert(recommendation.planner_id === "expected_information_gain_v1" && recommendation.planner_version === "1.0.0", "Recommendation planner identity is invalid");
+  diagnosisAssert(recommendation.reason_code === "max_expected_information" && recommendation.reason_text === "This eligible experiment has the highest expected information gain under the public five-hypothesis model.", "Recommendation reason is invalid");
+  diagnosisAssert(Number.isInteger(recommendation.state_version) && recommendation.state_version >= 0, "Recommendation state version is invalid");
+  diagnosisAssert(recommendation.attempt_cost === 1 && recommendation.measurement_cost === 1 && Number.isFinite(recommendation.expected_information_gain_nats) && recommendation.expected_information_gain_nats >= 0, "Recommendation costs or score are invalid");
+  diagnosisAssert(DIAGNOSIS_ACTIONS.some((action) => action.operation === recommendation.operation && diagnosisCanonicalJson(action.controls) === diagnosisCanonicalJson(recommendation.controls)), "Recommendation action is outside the frozen action table");
+}
+
+async function diagnosisValidateRecommendationHash(recommendation) {
+  if (recommendation === null) return;
+  const input = { operation: recommendation.operation, controls: recommendation.controls, state_version: recommendation.state_version, planner_id: recommendation.planner_id, planner_version: recommendation.planner_version };
+  const expected = await diagnosisSha256Text(diagnosisCanonicalJson(input));
+  diagnosisAssert(recommendation.action_input_hash === expected && recommendation.recommendation_id === expected, "Recommendation binding hash is invalid");
+}
+
+function diagnosisValidateState(campaignState) {
+  diagnosisExactObject(campaignState, ["campaign_id", "scenario_id", "scenario_version", "state_version", "status", "beliefs", "budget", "success_count", "successful_operations", "recommendation", "last_valid_curve_hash", "ledger_head_hash", "stop"], "State");
+  diagnosisAssert(campaignState.scenario_id === "cv_diagnosis_v1" && campaignState.scenario_version === "1.0.0" && Number.isInteger(campaignState.state_version), "State identity is invalid");
+  diagnosisValidateBeliefs(campaignState.beliefs, "State beliefs");
+  diagnosisExactObject(campaignState.budget, ["attempt_limit", "attempt_used", "measurement_limit", "measurement_used"], "Budget");
+  diagnosisAssert(campaignState.budget.attempt_limit === 12 && campaignState.budget.measurement_limit === 10, "Budget limits are invalid");
+  diagnosisAssert(Number.isInteger(campaignState.budget.attempt_used) && campaignState.budget.attempt_used >= 0 && campaignState.budget.attempt_used <= 12, "Attempt budget is invalid");
+  diagnosisAssert(Number.isInteger(campaignState.budget.measurement_used) && campaignState.budget.measurement_used >= 0 && campaignState.budget.measurement_used <= 10, "Measurement budget is invalid");
+  diagnosisAssert(Number.isInteger(campaignState.success_count) && campaignState.success_count >= 0, "Success count is invalid");
+  diagnosisAssert(Array.isArray(campaignState.successful_operations), "Successful operations must be an array");
+  diagnosisExactObject(campaignState.stop, ["terminal", "reason"], "Stop");
+  diagnosisValidateRecommendation(campaignState.recommendation);
+  if (campaignState.recommendation !== null) diagnosisAssert(campaignState.recommendation.state_version === campaignState.state_version, "Recommendation is bound to the wrong state version");
+  diagnosisValidateStateSurface(campaignState);
+}
+
+async function diagnosisValidateEvent(event, label) {
+  diagnosisExactObject(event, ["event_id", "event_index", "event_type", "request_id", "idempotency_input_hash", "state_version_before", "state_version_after", "recommendation_id", "operation", "controls", "status", "failure_code", "failure_message", "rejection_code", "rejection_message", "attempt_cost", "measurement_cost", "observation", "beliefs_before", "beliefs_after", "previous_event_hash", "event_hash"], label);
+  diagnosisAssert(Number.isInteger(event.event_index) && event.event_index >= 0 && event.event_id === `event-${event.event_index + 1}`, `${label} index or identity is invalid`);
+  diagnosisAssert(["action", "stop"].includes(event.event_type) && ["success", "timeout", "qc_failed", "rejected"].includes(event.status), `${label} type or status is invalid`);
+  diagnosisAssert(typeof event.request_id === "string" && event.request_id.length > 0 && /^[0-9a-f]{64}$/.test(event.idempotency_input_hash), `${label} request identity is invalid`);
+  diagnosisAssert(Number.isInteger(event.state_version_before) && event.state_version_after === event.state_version_before + 1, `${label} state-version transition is invalid`);
+  diagnosisAssert(/^[0-9a-f]{64}$/.test(event.previous_event_hash) && /^[0-9a-f]{64}$/.test(event.event_hash), `${label} ledger hashes are invalid`);
+  diagnosisValidateBeliefs(event.beliefs_before, `${label}.beliefs_before`);
+  diagnosisValidateBeliefs(event.beliefs_after, `${label}.beliefs_after`);
+  if (event.observation !== null) await diagnosisValidateObservation(event.observation, `${label}.observation`);
+  diagnosisAssert(event.attempt_cost === 1, `${label} must charge one attempt`);
+  if (event.event_type === "action" && event.status !== "rejected") {
+    diagnosisAssert(typeof event.recommendation_id === "string" && DIAGNOSIS_ACTIONS.some((action) => action.operation === event.operation && diagnosisSame(action.controls, event.controls)), `${label} executed action is outside the frozen action table`);
+  }
+  const isExecuted = ["success", "timeout", "qc_failed"].includes(event.status);
+  diagnosisAssert(event.measurement_cost === (isExecuted ? 1 : 0), `${label} measurement cost does not match status`);
+  if (event.status === "success") {
+    diagnosisAssert(event.event_type === "action" && event.observation !== null, `${label} success must be an observed action`);
+    diagnosisAssert(event.failure_code === null && event.failure_message === null && event.rejection_code === null && event.rejection_message === null, `${label} success carries failure metadata`);
+  } else {
+    diagnosisAssert(event.observation === null && diagnosisSame(event.beliefs_before, event.beliefs_after), `${label} failure/rejection must preserve beliefs and carry no observation`);
+  }
+  if (["timeout", "qc_failed"].includes(event.status)) {
+    const expected = event.status === "timeout"
+      ? ["TIMEOUT", "Operation timed out; no observation was created."]
+      : ["CURVE_QC_FAILED", "Generated CV evidence failed contract QC; no observation was created."];
+    diagnosisAssert(event.event_type === "action" && event.failure_code === expected[0] && event.failure_message === expected[1], `${label} failure metadata is invalid`);
+    diagnosisAssert(event.rejection_code === null && event.rejection_message === null, `${label} failure carries rejection metadata`);
+  }
+  if (event.status === "rejected") {
+    diagnosisAssert(event.failure_code === null && event.failure_message === null && DIAGNOSIS_REJECTION_MESSAGES[event.rejection_code] === event.rejection_message, `${label} rejection metadata is invalid`);
+    diagnosisAssert(event.recommendation_id === null || typeof event.recommendation_id === "string", `${label} rejected recommendation identity is not sanitized`);
+    diagnosisAssert(event.operation === null || DIAGNOSIS_ACTIONS.some((action) => action.operation === event.operation), `${label} rejected operation is not sanitized`);
+    diagnosisAssert(event.controls === null || (event.operation !== null && DIAGNOSIS_ACTIONS.some((action) => action.operation === event.operation && diagnosisSame(action.controls, event.controls))), `${label} rejected controls are not sanitized`);
+  }
+  if (event.event_type === "stop") diagnosisAssert(event.status === "rejected" && event.operation === null && event.controls === null && event.recommendation_id === null, `${label} stop event shape is invalid`);
+  const expectedHash = await diagnosisSha256Text(diagnosisCanonicalJson(diagnosisWithout(event, "event_hash")));
+  diagnosisAssert(expectedHash === event.event_hash, `${label} event hash does not verify`);
+}
+
+function diagnosisSame(left, right) {
+  return diagnosisCanonicalJson(left) === diagnosisCanonicalJson(right);
+}
+
+function diagnosisSuccessfulOperations(previous, event) {
+  const operations = [...previous];
+  if (event.status === "success" && !operations.includes(event.operation)) operations.push(event.operation);
+  return operations;
+}
+
+function diagnosisLastCurveHash(previous, event) {
+  return event.status === "success" && event.observation?.kind === "cv"
+    ? event.observation.curve.curve_hash
+    : previous;
+}
+
+function diagnosisValidateStateSurface(campaignState) {
+  diagnosisAssert(["active", "stopped", "budget_exhausted"].includes(campaignState.status), "State status is invalid");
+  diagnosisAssert(/^[0-9a-f]{64}$/.test(campaignState.ledger_head_hash), "State ledger head is invalid");
+  diagnosisAssert(campaignState.last_valid_curve_hash === null || /^[0-9a-f]{64}$/.test(campaignState.last_valid_curve_hash), "State last curve hash is invalid");
+  diagnosisAssert(campaignState.success_count <= campaignState.budget.measurement_used, "State success count exceeds executed measurements");
+  diagnosisAssert(campaignState.successful_operations.every((operation) => DIAGNOSIS_ACTIONS.some((action) => action.operation === operation)), "State contains an unknown successful operation");
+  diagnosisAssert(new Set(campaignState.successful_operations).size === campaignState.successful_operations.length, "State successful operations contain duplicates");
+  if (campaignState.status === "active") {
+    diagnosisAssert(!campaignState.stop.terminal && campaignState.stop.reason === null && campaignState.recommendation !== null, "Active State terminal/recommendation fields are inconsistent");
+  } else {
+    diagnosisAssert(campaignState.stop.terminal && campaignState.recommendation === null, "Terminal State fields are inconsistent");
+    diagnosisAssert(campaignState.status === "budget_exhausted" ? campaignState.stop.reason === "budget_exhausted" : ["confident_diagnosis", "low_expected_information"].includes(campaignState.stop.reason), "Terminal State reason is inconsistent");
+  }
+}
+
+function diagnosisReconcileTransition(previousState, nextState, event) {
+  diagnosisAssert(event !== null, "Charged action response omitted its event");
+  diagnosisAssert(previousState.campaign_id === nextState.campaign_id && previousState.scenario_id === nextState.scenario_id && previousState.scenario_version === nextState.scenario_version, "Action State identity changed across the transition");
+  diagnosisAssert(event.state_version_before === previousState.state_version && event.state_version_after === nextState.state_version, "Action event and State versions do not reconcile");
+  diagnosisAssert(event.previous_event_hash === previousState.ledger_head_hash && event.event_hash === nextState.ledger_head_hash, "Action event and State ledger heads do not reconcile");
+  diagnosisAssert(diagnosisSame(event.beliefs_before, previousState.beliefs) && diagnosisSame(event.beliefs_after, nextState.beliefs), "Action event and State beliefs do not reconcile");
+  diagnosisAssert(nextState.budget.attempt_used === previousState.budget.attempt_used + event.attempt_cost && nextState.budget.measurement_used === previousState.budget.measurement_used + event.measurement_cost, "Action event and State budget deltas do not reconcile");
+  diagnosisAssert(nextState.success_count === previousState.success_count + (event.status === "success" ? 1 : 0), "Action event and State success count do not reconcile");
+  diagnosisAssert(diagnosisSame(nextState.successful_operations, diagnosisSuccessfulOperations(previousState.successful_operations, event)), "Action event and State successful operations do not reconcile");
+  diagnosisAssert(nextState.last_valid_curve_hash === diagnosisLastCurveHash(previousState.last_valid_curve_hash, event), "Action event and State last curve do not reconcile");
+}
+
+async function diagnosisReconcileLedger(campaignState, events, prior) {
+  diagnosisValidateBeliefs(prior, "Ledger prior");
+  const genesis = await diagnosisSha256Text(diagnosisCanonicalJson({ campaign_id: campaignState.campaign_id, scenario_id: campaignState.scenario_id, scenario_version: campaignState.scenario_version }));
+  let version = 0;
+  let head = genesis;
+  let beliefs = [...prior];
+  let attemptUsed = 0;
+  let measurementUsed = 0;
+  let successCount = 0;
+  let successfulOperations = [];
+  let lastCurveHash = null;
+  for (let index = 0; index < events.length; index += 1) {
+    const event = events[index];
+    diagnosisAssert(event.event_index === index && event.event_id === `event-${index + 1}`, `Ledger event ${index} is out of order`);
+    diagnosisAssert(event.state_version_before === version && event.state_version_after === version + 1, `Ledger event ${index} version is discontinuous`);
+    diagnosisAssert(event.previous_event_hash === head, `Ledger event ${index} previous hash is discontinuous`);
+    diagnosisAssert(diagnosisSame(event.beliefs_before, beliefs), `Ledger event ${index} beliefs_before is discontinuous`);
+    version = event.state_version_after;
+    head = event.event_hash;
+    beliefs = [...event.beliefs_after];
+    attemptUsed += event.attempt_cost;
+    measurementUsed += event.measurement_cost;
+    if (event.status === "success") successCount += 1;
+    successfulOperations = diagnosisSuccessfulOperations(successfulOperations, event);
+    lastCurveHash = diagnosisLastCurveHash(lastCurveHash, event);
+  }
+  diagnosisAssert(campaignState.state_version === version && campaignState.ledger_head_hash === head, "Ledger head/version do not reconcile with State");
+  diagnosisAssert(diagnosisSame(campaignState.beliefs, beliefs), "Ledger final beliefs do not reconcile with State");
+  diagnosisAssert(campaignState.budget.attempt_used === attemptUsed && campaignState.budget.measurement_used === measurementUsed, "Ledger costs do not reconcile with State budget");
+  diagnosisAssert(campaignState.success_count === successCount && diagnosisSame(campaignState.successful_operations, successfulOperations), "Ledger successes do not reconcile with State");
+  diagnosisAssert(campaignState.last_valid_curve_hash === lastCurveHash, "Ledger last valid curve does not reconcile with State");
+  return true;
+}
+
+async function diagnosisValidateFixture(fixture, label) {
+  diagnosisExactObject(fixture, ["provenance", "likelihood_role", "peak", "curve"], label);
+  diagnosisAssert(fixture.provenance === "simulated" && fixture.likelihood_role === "excluded", `${label} provenance is invalid`);
+  diagnosisValidatePeak(fixture.peak, `${label}.peak`);
+  await diagnosisValidateCurve(fixture.curve, `${label}.curve`);
+  diagnosisValidatePeakAgainstCurve(fixture.peak, fixture.curve, label);
+}
+
+async function diagnosisValidateScenario(scenario) {
+  diagnosisExactObject(scenario, ["scenario_id", "scenario_version", "planner_id", "planner_version", "belief_method", "prior", "attempt_limit", "measurement_limit", "hypotheses", "actions", "comparator", "initial_trigger", "commitment"], "Scenario");
+  diagnosisAssert(scenario.scenario_id === "cv_diagnosis_v1" && scenario.scenario_version === "1.0.0" && scenario.planner_id === "expected_information_gain_v1" && scenario.planner_version === "1.0.0", "Scenario identity is invalid");
+  diagnosisValidateBeliefs(scenario.prior, "Scenario prior");
+  diagnosisAssert(scenario.attempt_limit === 12 && scenario.measurement_limit === 10 && scenario.hypotheses.length === 5 && scenario.actions.length === 12, "Scenario dimensions are invalid");
+  scenario.hypotheses.forEach((hypothesis, index) => {
+    diagnosisExactObject(hypothesis, ["id", "label", "order"], `Hypothesis ${index}`);
+    diagnosisAssert(hypothesis.id === DIAGNOSIS_HYPOTHESIS_ORDER[index] && hypothesis.order === index, "Hypothesis order is invalid");
+  });
+  scenario.actions.forEach((action, index) => {
+    diagnosisExactObject(action, ["operation", "controls", "display_label", "attempt_cost", "measurement_cost"], `ActionSpec ${index}`);
+    const expected = DIAGNOSIS_ACTIONS[index];
+    diagnosisAssert(action.operation === expected.operation && diagnosisCanonicalJson(action.controls) === diagnosisCanonicalJson(expected.controls), `ActionSpec ${index} is outside the frozen action table`);
+    diagnosisAssert(typeof action.display_label === "string" && action.display_label.trim().length > 0 && action.attempt_cost === 1 && action.measurement_cost === 1, `ActionSpec ${index} metadata is invalid`);
+  });
+  await diagnosisValidateFixture(scenario.comparator, "Scenario comparator");
+  await diagnosisValidateFixture(scenario.initial_trigger, "Scenario trigger");
+  diagnosisAssert(/^[0-9a-f]{64}$/.test(scenario.commitment), "Scenario commitment is invalid");
+}
+
+async function diagnosisValidatePayload(payload, allowReveal) {
+  diagnosisAssert(payload && typeof payload.type === "string", "Payload discriminator is missing");
+  if (payload.type === "scenario") {
+    diagnosisExactObject(payload, ["type", "scenario"], "Scenario payload");
+    await diagnosisValidateScenario(payload.scenario);
+  } else if (payload.type === "state") {
+    diagnosisExactObject(payload, ["type", "state", "event"], "State payload");
+    diagnosisValidateState(payload.state);
+    await diagnosisValidateRecommendationHash(payload.state.recommendation);
+    if (payload.event !== null) await diagnosisValidateEvent(payload.event, "State event");
+  } else if (payload.type === "ledger") {
+    diagnosisExactObject(payload, ["type", "state", "events"], "Ledger payload");
+    diagnosisValidateState(payload.state);
+    await diagnosisValidateRecommendationHash(payload.state.recommendation);
+    diagnosisAssert(Array.isArray(payload.events), "Ledger events must be an array");
+    for (let index = 0; index < payload.events.length; index += 1) await diagnosisValidateEvent(payload.events[index], `Ledger event ${index}`);
+  } else if (payload.type === "reveal") {
+    diagnosisAssert(allowReveal, "Reveal payload arrived without an explicit reveal request");
+    diagnosisExactObject(payload, ["type", "reveal"], "Reveal payload");
+    diagnosisExactObject(payload.reveal, ["commitment", "commitment_payload"], "Reveal");
+  } else if (payload.type === "error") {
+    diagnosisExactObject(payload, ["type", "error", "state", "event"], "Error payload");
+    diagnosisExactObject(payload.error, ["code", "message"], "Error");
+    diagnosisAssert(DIAGNOSIS_ERROR_CODES.has(payload.error.code) && typeof payload.error.message === "string" && payload.error.message.length > 0, "Error code or message is outside the frozen contract");
+    if (payload.error.code in DIAGNOSIS_REJECTION_MESSAGES) diagnosisAssert(payload.error.message === DIAGNOSIS_REJECTION_MESSAGES[payload.error.code], "Rejected Error message is not the frozen message");
+    if (payload.state !== null) {
+      diagnosisValidateState(payload.state);
+      await diagnosisValidateRecommendationHash(payload.state.recommendation);
+    }
+    if (payload.event !== null) await diagnosisValidateEvent(payload.event, "Rejected event");
+  } else throw new Error("Unknown diagnosis payload type");
+}
+
+function diagnosisValidateEnvelopeStatus(envelope, httpStatus) {
+  const payload = envelope.payload;
+  if (payload.type === "error") {
+    const isRejection = payload.error.code in DIAGNOSIS_REJECTION_MESSAGES;
+    diagnosisAssert(envelope.status === (isRejection ? "rejected" : "error"), "Envelope status does not match Error payload");
+    if (httpStatus !== null) {
+      const expected = isRejection ? 422 : {
+        MALFORMED_JSON: 400,
+        INVALID_REQUEST_ENVELOPE: 400,
+        NOT_FOUND: 404,
+        STALE_STATE: 409,
+        TERMINAL_STATE: 409,
+        IDEMPOTENCY_CONFLICT: 409,
+        REVEAL_NOT_AVAILABLE: 409,
+        REVEAL_ALREADY_COMPLETED: 409,
+        INTERNAL_ERROR: 500,
+      }[payload.error.code];
+      diagnosisAssert(httpStatus === expected, "HTTP status does not match Error code");
+    }
+    return;
+  }
+  const isCreation = payload.type === "state" && payload.event === null && envelope.request_id !== null && envelope.previous_state_version === null && envelope.state_version === 0;
+  diagnosisAssert(envelope.status === (isCreation ? "created" : "ok"), "Envelope status does not match success payload");
+  if (httpStatus !== null) diagnosisAssert(httpStatus === (isCreation ? 201 : 200), "HTTP status does not match success payload");
+}
+
+async function diagnosisVerifyEnvelope(envelope, { allowReveal = false, expectedInputHash = null, httpStatus = null } = {}) {
+  diagnosisExactObject(envelope, DIAGNOSIS_ENVELOPE_FIELDS, "Envelope");
+  diagnosisAssert(envelope.schema_version === "1.0.0", "Envelope schema version is invalid");
+  if (!allowReveal) diagnosisAssert(!diagnosisHasSecretKey(envelope), "Pre-reveal response leaked private fixture data");
+  await diagnosisValidatePayload(envelope.payload, allowReveal);
+  diagnosisValidateEnvelopeStatus(envelope, httpStatus);
+  const expectedHash = await diagnosisSha256Text(diagnosisCanonicalJson(diagnosisWithout(envelope, "response_hash")));
+  diagnosisAssert(expectedHash === envelope.response_hash, "Envelope response hash does not verify");
+  if (expectedInputHash !== null) diagnosisAssert(envelope.idempotency_input_hash === expectedInputHash, "Envelope idempotency identity does not match the submitted bytes");
+  if (envelope.payload.type === "state" || (envelope.payload.type === "error" && envelope.payload.state)) {
+    const responseState = envelope.payload.state;
+    diagnosisAssert(responseState.state_version === envelope.state_version && responseState.ledger_head_hash === envelope.ledger_hash && responseState.campaign_id === envelope.campaign_id, "Envelope and State identity do not reconcile");
+    if (envelope.payload.event) diagnosisAssert(envelope.payload.event.previous_event_hash === envelope.previous_ledger_hash && envelope.payload.event.event_hash === envelope.ledger_hash, "Envelope event chain does not reconcile");
+  }
+  return envelope;
+}
+
+function diagnosisValidateGetIdentity(envelope, path) {
+  diagnosisAssert(envelope.request_id === null && envelope.idempotency_input_hash === null, "GET response unexpectedly carries POST idempotency identity");
+  if (envelope.payload.type === "error") return;
+  if (path === `${DIAGNOSIS_API}/scenario`) {
+    diagnosisAssert(envelope.payload.type === "scenario" && envelope.scenario_id === "cv_diagnosis_v1", "Scenario endpoint returned the wrong identity");
+    diagnosisAssert(envelope.campaign_id === null && envelope.previous_state_version === null && envelope.state_version === null && envelope.previous_ledger_hash === null && envelope.ledger_hash === null, "Scenario GET campaign/version fields must be null");
+    return;
+  }
+  const escaped = DIAGNOSIS_API.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const match = path.match(new RegExp(`^${escaped}/campaigns/([^/]+)(/ledger)?$`));
+  diagnosisAssert(match, "GET path is outside the frozen diagnosis endpoint matrix");
+  const expectedCampaignId = decodeURIComponent(match[1]);
+  const expectedType = match[2] ? "ledger" : "state";
+  diagnosisAssert(envelope.payload.type === expectedType, "Campaign GET endpoint returned the wrong payload type");
+  const responseState = envelope.payload.state;
+  diagnosisAssert(envelope.scenario_id === "cv_diagnosis_v1" && envelope.campaign_id === expectedCampaignId && responseState.campaign_id === expectedCampaignId, "Campaign GET response is bound to another campaign");
+  diagnosisAssert(envelope.previous_state_version === envelope.state_version && envelope.state_version === responseState.state_version, "Campaign GET version fields are not non-mutating");
+  diagnosisAssert(envelope.previous_ledger_hash === envelope.ledger_hash && envelope.ledger_hash === responseState.ledger_head_hash, "Campaign GET ledger fields are not non-mutating");
+}
+
+function diagnosisValidatePreparedIdentity(envelope, prepared, httpStatus) {
+  diagnosisAssert(envelope.request_id === prepared.body.request_id && envelope.idempotency_input_hash === prepared.inputHash, "POST response is not bound to the submitted request identity");
+  const isCreate = prepared.campaignId === null;
+  if (isCreate && httpStatus === 201) {
+    const responseState = envelope.payload.state;
+    diagnosisAssert(envelope.payload.type === "state" && envelope.campaign_id === responseState.campaign_id && envelope.scenario_id === responseState.scenario_id, "Create response campaign identity is invalid");
+    diagnosisAssert(envelope.previous_state_version === null && envelope.previous_ledger_hash === null && envelope.state_version === 0 && responseState.state_version === 0 && envelope.ledger_hash === responseState.ledger_head_hash, "Create response version/ledger nullability is invalid");
+    return;
+  }
+  if (isCreate) {
+    diagnosisAssert(envelope.campaign_id === null && envelope.previous_state_version === null && envelope.state_version === null && envelope.previous_ledger_hash === null && envelope.ledger_hash === null, "Rejected create response unexpectedly carries campaign state");
+    return;
+  }
+  diagnosisAssert(envelope.campaign_id === prepared.campaignId && envelope.scenario_id === "cv_diagnosis_v1", "POST response is bound to another campaign");
+  const event = envelope.payload.event ?? null;
+  if (event !== null) {
+    diagnosisAssert([200, 422].includes(httpStatus), "Only charged 200/422 responses may append an event");
+    diagnosisAssert(envelope.previous_state_version === prepared.baseStateVersion && envelope.previous_ledger_hash === prepared.baseLedgerHash, "Charged POST response does not start from the submitted State");
+    diagnosisAssert(envelope.state_version === prepared.baseStateVersion + 1 && event.state_version_before === prepared.baseStateVersion && event.state_version_after === envelope.state_version, "Charged POST version bracket is invalid");
+    diagnosisAssert(event.previous_event_hash === prepared.baseLedgerHash && event.event_hash === envelope.ledger_hash, "Charged POST ledger bracket is invalid");
+    return;
+  }
+  diagnosisAssert(envelope.previous_state_version === envelope.state_version && envelope.previous_ledger_hash === envelope.ledger_hash, "Non-mutating POST response changed version or ledger identity");
+  if (httpStatus === 200) diagnosisAssert(envelope.state_version === prepared.baseStateVersion && envelope.ledger_hash === prepared.baseLedgerHash, "Successful non-mutating POST response is not bound to the submitted State");
+}
+
+function diagnosisRequestId() {
+  return window.crypto.randomUUID();
+}
+
+async function diagnosisFetchGet(path, { allowReveal = false } = {}) {
+  const response = await fetch(path, { cache: "no-store", headers: { Accept: "application/json" } });
+  const envelope = await diagnosisVerifyEnvelope(await response.json(), { allowReveal, httpStatus: response.status });
+  diagnosisValidateGetIdentity(envelope, path);
+  if (!response.ok) throw new Error(envelope.payload.error?.message || `HTTP ${response.status}`);
+  return envelope;
+}
+
+async function diagnosisPreparePost(path, body, campaignId) {
+  const rawBody = JSON.stringify(body);
+  const requestBodyHash = await diagnosisSha256Text(rawBody);
+  const input = { method: "POST", canonical_path: path, campaign_id: campaignId, request_id: body.request_id, request_body_hash: requestBodyHash };
+  return {
+    path,
+    rawBody,
+    body,
+    campaignId,
+    baseStateVersion: body.expected_state_version ?? null,
+    baseLedgerHash: campaignId ? diagnosis.campaign?.ledger_head_hash ?? null : null,
+    inputHash: await diagnosisSha256Text(diagnosisCanonicalJson(input)),
+  };
+}
+
+async function diagnosisSendPrepared(prepared, { allowReveal = false } = {}) {
+  const response = await fetch(prepared.path, { method: "POST", cache: "no-store", headers: { Accept: "application/json", "Content-Type": "application/json" }, body: prepared.rawBody });
+  const envelope = await diagnosisVerifyEnvelope(await response.json(), { allowReveal, expectedInputHash: prepared.inputHash, httpStatus: response.status });
+  diagnosisValidatePreparedIdentity(envelope, prepared, response.status);
+  return { response, envelope };
+}
+
+function diagnosisActionLabel(recommendation) {
+  if (!recommendation || !diagnosis.scenario) return "—";
+  const controls = diagnosisCanonicalJson(recommendation.controls);
+  return diagnosis.scenario.actions.find((action) => action.operation === recommendation.operation && diagnosisCanonicalJson(action.controls) === controls)?.display_label || recommendation.operation;
+}
+
+function diagnosisPercent(value) {
+  return `${(value * 100).toFixed(1)}%`;
+}
+
+function diagnosisPotential(value) {
+  return `${Number(value).toFixed(3)} V`;
+}
+
+function diagnosisCurrent(value) {
+  return `${Number(value).toExponential(3)} A`;
+}
+
+function renderDiagnosisBeliefs(campaignState) {
+  const container = byId("diagnosis-beliefs");
+  container.replaceChildren();
+  diagnosis.scenario.hypotheses.forEach((hypothesis, index) => {
+    const row = document.createElement("div");
+    row.className = "diagnosis-belief-row";
+    const label = appendText(row, "span", hypothesis.label);
+    const track = appendText(row, "span", "", "diagnosis-belief-track");
+    const fill = appendText(track, "span", "", "diagnosis-belief-fill");
+    fill.style.width = diagnosisPercent(campaignState.beliefs[index]);
+    const value = appendText(row, "span", diagnosisPercent(campaignState.beliefs[index]), "diagnosis-belief-value");
+    label.id = `diagnosis-belief-label-${index}`;
+    value.setAttribute("aria-labelledby", label.id);
+    container.appendChild(row);
+  });
+}
+
+function diagnosisCurvePath(curve, frame) {
+  return curve.potential_v.map((potential, index) => `${index ? "L" : "M"}${frame.x(potential).toFixed(2)},${frame.y(curve.current_a[index]).toFixed(2)}`).join(" ");
+}
+
+function renderDiagnosisCurveTable(curves) {
+  const container = byId("diagnosis-curve-table");
+  container.replaceChildren();
+  const table = document.createElement("table");
+  const caption = appendText(table, "caption", "Complete verified synthetic CV points");
+  caption.className = "sr-only";
+  const head = document.createElement("thead");
+  const headRow = document.createElement("tr");
+  ["Curve", "Point", "Sweep", "Potential / V", "Current / A"].forEach((value) => appendText(headRow, "th", value));
+  head.appendChild(headRow);
+  const body = document.createElement("tbody");
+  curves.forEach(({ label, curve }) => curve.potential_v.forEach((potential, index) => {
+    const row = document.createElement("tr");
+    [label, index + 1, curve.sweep_direction[index], potential, curve.current_a[index]].forEach((value) => appendText(row, "td", value));
+    body.appendChild(row);
+  }));
+  table.append(head, body);
+  container.appendChild(table);
+}
+
+function renderDiagnosisChart() {
+  const svg = byId("diagnosis-chart");
+  svg.replaceChildren();
+  const curves = diagnosis.scenario ? [
+    { label: "Frozen healthy/control comparator", curve: diagnosis.scenario.comparator.curve, className: "diagnosis-curve comparator" },
+    { label: "Initial abnormal CV", curve: diagnosis.scenario.initial_trigger.curve, className: "diagnosis-curve trigger" },
+    ...(diagnosis.latestCurve ? [{ label: "Latest valid CV", curve: diagnosis.latestCurve, className: "diagnosis-curve latest" }] : []),
+  ] : [];
+  const title = svgElement("title", { id: "diagnosis-chart-title" });
+  title.textContent = "Synthetic cyclic voltammogram comparison";
+  const desc = svgElement("desc", { id: "diagnosis-chart-desc" });
+  if (!curves.length) {
+    desc.textContent = "Verified full synthetic CV arrays are unavailable; no curve is drawn.";
+    svg.append(title, desc);
+    const empty = svgElement("text", { class: "chart-empty-message", x: 380, y: 205, "text-anchor": "middle" });
+    empty.textContent = "Verified full synthetic CV arrays are unavailable";
+    svg.appendChild(empty);
+    return;
+  }
+  desc.textContent = `${curves.length} verified synthetic full curves, each with 122 points, plotted as current in amperes against potential versus synthetic SHE.`;
+  svg.append(title, desc);
+  const maximum = Math.max(...curves.flatMap(({ curve }) => curve.current_a.map(Math.abs)), 1e-9);
+  const frame = drawChartFrame(svg, { xMin: .65, xMax: .95, yMin: -maximum * 1.12, yMax: maximum * 1.12, xScale: linearScale, xTicks: [.65, .70, .75, .80, .85, .90, .95], yTicks: [-maximum, 0, maximum], xFormat: (value) => value.toFixed(2), yFormat: (value) => value.toExponential(1), xLabel: "Potential vs synthetic SHE / V", yLabel: "Current / A" });
+  curves.forEach(({ label, curve, className }, index) => {
+    svg.appendChild(svgElement("path", { d: diagnosisCurvePath(curve, frame), class: className }));
+    const legend = svgElement("text", { class: `diagnosis-legend legend-${index}`, x: frame.left + 8, y: frame.top + 18 + index * 20 });
+    legend.textContent = label;
+    svg.appendChild(legend);
+  });
+  renderDiagnosisCurveTable(curves);
+}
+
+function renderDiagnosisResult(event) {
+  const copy = byId("diagnosis-result-copy");
+  const delta = byId("diagnosis-belief-delta");
+  delta.replaceChildren();
+  if (!event) {
+    copy.textContent = "Run the recommended experiment to reveal the next saved observation.";
+    return;
+  }
+  if (event.status === "success" && event.observation?.kind === "cv") {
+    const peak = event.observation.peak;
+    copy.textContent = `VALID SYNTHETIC RESULT · ΔEp ${diagnosisPotential(peak.delta_Ep_v)} · midpoint ${diagnosisPotential(peak.midpoint_v)} · |ipa| ${diagnosisCurrent(Math.abs(peak.ipa_a))}`;
+  } else if (event.status === "success" && event.observation?.kind === "scalar") {
+    copy.textContent = `VALID SYNTHETIC RESULT · ${event.observation.feature_name} = ${event.observation.value} ${event.observation.unit}`;
+  } else if (event.status === "rejected") {
+    copy.textContent = `${event.rejection_message} Request rejected · attempt charged · no experiment executed · working beliefs unchanged.`;
+  } else {
+    copy.textContent = event.failure_message || "Operation failed. No replacement value was created.";
+  }
+  diagnosis.scenario.hypotheses.forEach((hypothesis, index) => appendText(delta, "p", `${hypothesis.label}: ${diagnosisPercent(event.beliefs_before[index])} → ${diagnosisPercent(event.beliefs_after[index])}`));
+}
+
+function renderDiagnosisTimeline() {
+  const list = byId("diagnosis-timeline");
+  list.replaceChildren();
+  if (!diagnosis.events.length) {
+    appendText(list, "li", "No experiments run yet.");
+    return;
+  }
+  diagnosis.events.forEach((event, index) => {
+    const item = document.createElement("li");
+    const heading = event.event_type === "action" ? `${index + 1} · ${humanize(event.operation || "rejected request")}` : `${index + 1} · Stop check`;
+    appendText(item, "b", heading);
+    const reason = diagnosis.eventReasons?.[event.event_id];
+    if (reason) appendText(item, "span", `Recommended because: ${reason}`);
+    const result = event.status === "success" ? "valid result · working beliefs updated" : event.status === "rejected" ? `${event.rejection_message} · beliefs unchanged` : `${event.failure_message} · beliefs unchanged`;
+    appendText(item, "span", `${result} · cost ${event.attempt_cost} attempt / ${event.measurement_cost} measurement`);
+    list.appendChild(item);
+  });
+}
+
+function renderDiagnosisAudit() {
+  byId("diagnosis-audit").textContent = diagnosis.campaign ? JSON.stringify({ scenario_id: diagnosis.scenario.scenario_id, scenario_version: diagnosis.scenario.scenario_version, commitment: diagnosis.scenario.commitment, state: diagnosis.campaign, events: diagnosis.events }, null, 2) : "No verified campaign state yet.";
+}
+
+function renderDiagnosis() {
+  if (!diagnosis.scenario || !diagnosis.campaign) return;
+  const campaignState = diagnosis.campaign;
+  const comparator = diagnosis.scenario.comparator.peak;
+  const trigger = diagnosis.scenario.initial_trigger.peak;
+  byId("diagnosis-comparator-summary").textContent = `Frozen healthy/control ΔEp · ${diagnosisPotential(comparator.delta_Ep_v)} → initial abnormal ΔEp · ${diagnosisPotential(trigger.delta_Ep_v)}`;
+  byId("diagnosis-measurement-budget").textContent = `Budget · ${campaignState.budget.measurement_limit - campaignState.budget.measurement_used}/${campaignState.budget.measurement_limit} operations left`;
+  byId("diagnosis-attempt-budget").textContent = `Attempts · ${campaignState.budget.attempt_used}/${campaignState.budget.attempt_limit}`;
+  renderDiagnosisBeliefs(campaignState);
+  const recommendation = campaignState.recommendation;
+  byId("diagnosis-recommendation").textContent = recommendation ? diagnosisActionLabel(recommendation) : "No further experiment";
+  byId("diagnosis-reason").textContent = recommendation ? recommendation.reason_text : DIAGNOSIS_STOP_COPY[campaignState.stop.reason] || "Diagnosis loop stopped.";
+  byId("diagnosis-cost").textContent = recommendation ? `${recommendation.measurement_cost} operation · ${recommendation.attempt_cost} attempt` : "—";
+  const run = byId("diagnosis-run");
+  run.disabled = diagnosis.busy || !recommendation || campaignState.stop.terminal;
+  run.textContent = campaignState.stop.terminal ? "Diagnosis loop complete" : diagnosis.busy ? "Running saved experiment…" : "Run recommended experiment";
+  byId("diagnosis-reveal").disabled = !campaignState.stop.terminal || diagnosis.busy || diagnosis.revealed;
+  byId("diagnosis-reveal-help").textContent = campaignState.stop.terminal ? "Synthetic truth for this committed replay—not experimental truth." : "Truth remains unavailable until the diagnosis loop reaches a terminal state.";
+  byId("diagnosis-status").textContent = campaignState.stop.terminal ? DIAGNOSIS_STOP_COPY[campaignState.stop.reason] : recommendation ? "Recommendation ready." : "No verified recommendation is available.";
+  renderDiagnosisChart();
+  renderDiagnosisTimeline();
+  renderDiagnosisAudit();
+}
+
+function diagnosisShowError(message) {
+  const error = byId("diagnosis-error");
+  error.textContent = message;
+  error.hidden = false;
+  error.focus();
+}
+
+function diagnosisClearError() {
+  byId("diagnosis-error").hidden = true;
+  byId("diagnosis-error").textContent = "";
+}
+
+async function diagnosisFetchLedger(campaignId) {
+  const envelope = await diagnosisFetchGet(`${DIAGNOSIS_API}/campaigns/${campaignId}/ledger`);
+  diagnosisAssert(envelope.payload.type === "ledger", "Ledger endpoint returned the wrong payload");
+  await diagnosisReconcileLedger(envelope.payload.state, envelope.payload.events, diagnosis.scenario.prior);
+  return { state: envelope.payload.state, events: envelope.payload.events };
+}
+
+function diagnosisLatestCurveFromEvents(events) {
+  for (let index = events.length - 1; index >= 0; index -= 1) {
+    const observation = events[index].observation;
+    if (events[index].status === "success" && observation?.kind === "cv") return observation.curve;
+  }
+  return null;
+}
+
+async function diagnosisApplyResponse(envelope, prepared) {
+  diagnosisAssert(["state", "error"].includes(envelope.payload.type), "Action returned the wrong payload type");
+  const responseState = envelope.payload.state;
+  diagnosisAssert(responseState, "Action response omitted campaign state");
+  diagnosisAssert(envelope.previous_state_version === prepared.baseStateVersion && envelope.previous_ledger_hash === prepared.baseLedgerHash, "Action response is stale against the submitted verified state");
+  const event = envelope.payload.event;
+  diagnosisReconcileTransition(diagnosis.campaign, responseState, event);
+  diagnosisAssert(event.request_id === prepared.body.request_id && event.idempotency_input_hash === prepared.inputHash, "Event request identity does not match the submitted bytes");
+  const verified = await diagnosisFetchLedger(responseState.campaign_id);
+  diagnosisAssert(diagnosisSame(verified.state, responseState), "Action response State does not match the verified ledger snapshot");
+  const nextReasons = { ...(diagnosis.eventReasons || {}) };
+  nextReasons[event.event_id] = diagnosis.pending?.recommendation?.reason_text || null;
+  const nextLatestCurve = diagnosisLatestCurveFromEvents(verified.events);
+  diagnosis.campaign = verified.state;
+  diagnosis.events = verified.events;
+  diagnosis.eventReasons = nextReasons;
+  diagnosis.latestCurve = nextLatestCurve;
+  renderDiagnosisResult(event);
+}
+
+async function diagnosisReconcilePending() {
+  if (!diagnosis.pending || !diagnosis.campaign) return;
+  try {
+    const current = await diagnosisFetchGet(`${DIAGNOSIS_API}/campaigns/${diagnosis.campaign.campaign_id}`);
+    diagnosisAssert(current.payload.type === "state", "Campaign reconciliation returned the wrong payload");
+    const verified = await diagnosisFetchLedger(current.payload.state.campaign_id);
+    diagnosisAssert(diagnosisSame(verified.state, current.payload.state), "Campaign State does not match the verified ledger snapshot");
+    const recorded = verified.events.some((event) => event.request_id === diagnosis.pending.body.request_id && event.idempotency_input_hash === diagnosis.pending.inputHash);
+    if (recorded) {
+      const recovered = await diagnosisSendPrepared(diagnosis.pending);
+      await diagnosisApplyResponse(recovered.envelope, diagnosis.pending);
+      diagnosis.pending = null;
+      byId("diagnosis-retry").hidden = true;
+      diagnosisClearError();
+    } else {
+      diagnosis.campaign = verified.state;
+      diagnosis.events = verified.events;
+      diagnosis.latestCurve = diagnosisLatestCurveFromEvents(verified.events);
+      byId("diagnosis-retry").hidden = false;
+      diagnosisShowError("The request was not recorded. Retry uses the identical request ID and bytes.");
+    }
+  } catch (error) {
+    byId("diagnosis-retry").hidden = false;
+    diagnosisShowError(`Connection lost after submission. Campaign reconciliation did not complete: ${error.message}`);
+  }
+}
+
+async function diagnosisRunPrepared(prepared) {
+  const epoch = diagnosis.epoch;
+  diagnosis.busy = true;
+  diagnosis.pending = prepared;
+  diagnosisClearError();
+  renderDiagnosis();
+  try {
+    const { response, envelope } = await diagnosisSendPrepared(prepared);
+    if (epoch !== diagnosis.epoch) return;
+    if (![200, 422].includes(response.status)) throw new Error(envelope.payload.error?.message || `HTTP ${response.status}`);
+    await diagnosisApplyResponse(envelope, prepared);
+    diagnosis.pending = null;
+    byId("diagnosis-retry").hidden = true;
+    announce(response.status === 422 ? "Request rejected. Attempt charged; beliefs unchanged." : "Synthetic experiment complete. Verified result rendered.");
+  } catch (error) {
+    if (epoch === diagnosis.epoch) await diagnosisReconcilePending();
+  } finally {
+    if (epoch === diagnosis.epoch) {
+      diagnosis.busy = false;
+      renderDiagnosis();
+    }
+  }
+}
+
+async function runDiagnosisRecommendation() {
+  if (diagnosis.busy || !diagnosis.campaign?.recommendation) return;
+  const recommendation = diagnosis.campaign.recommendation;
+  const body = { request_id: diagnosisRequestId(), expected_state_version: diagnosis.campaign.state_version, recommendation_id: recommendation.recommendation_id, action_input_hash: recommendation.action_input_hash, operation: recommendation.operation, controls: recommendation.controls };
+  const path = `${DIAGNOSIS_API}/campaigns/${diagnosis.campaign.campaign_id}/actions`;
+  const prepared = await diagnosisPreparePost(path, body, diagnosis.campaign.campaign_id);
+  prepared.recommendation = recommendation;
+  diagnosis.pending = prepared;
+  await diagnosisRunPrepared(prepared);
+}
+
+async function retryDiagnosisRequest() {
+  if (!diagnosis.pending || diagnosis.busy) return;
+  await diagnosisRunPrepared(diagnosis.pending);
+}
+
+async function revealDiagnosisTruth() {
+  if (diagnosis.busy || diagnosis.revealed || !diagnosis.campaign?.stop.terminal) return;
+  const body = { request_id: diagnosisRequestId(), expected_state_version: diagnosis.campaign.state_version };
+  const path = `${DIAGNOSIS_API}/campaigns/${diagnosis.campaign.campaign_id}/reveal`;
+  const prepared = await diagnosisPreparePost(path, body, diagnosis.campaign.campaign_id);
+  diagnosis.busy = true;
+  renderDiagnosis();
+  try {
+    const { response, envelope } = await diagnosisSendPrepared(prepared, { allowReveal: true });
+    diagnosisAssert(response.ok && envelope.payload.type === "reveal", "Reveal endpoint did not return verified truth");
+    const reveal = envelope.payload.reveal;
+    const payload = reveal.commitment_payload;
+    diagnosisExactObject(payload, ["scenario_id", "scenario_version", "hidden_truth", "seed_bundle", "reveal_nonce"], "CommitmentPayload");
+    diagnosisAssert(payload.scenario_id === diagnosis.scenario.scenario_id && payload.scenario_version === diagnosis.scenario.scenario_version && /^[A-Za-z0-9_-]{43}$/.test(payload.reveal_nonce), "Reveal payload identity or nonce is invalid");
+    diagnosisAssert(reveal.commitment === diagnosis.scenario.commitment && await diagnosisSha256Text(diagnosisCanonicalJson(payload)) === diagnosis.scenario.commitment, "Reveal does not open the original Scenario commitment");
+    diagnosis.revealed = true;
+    const truth = byId("diagnosis-truth");
+    truth.textContent = JSON.stringify(reveal, null, 2);
+    truth.hidden = false;
+    truth.focus();
+    announce("Synthetic benchmark truth revealed. It is not experimental truth.");
+  } catch (error) {
+    diagnosisShowError(`Synthetic truth was not shown: ${error.message}`);
+  } finally {
+    diagnosis.busy = false;
+    renderDiagnosis();
+  }
+}
+
+async function loadDiagnosis() {
+  try {
+    diagnosis.epoch += 1;
+    diagnosisClearError();
+    const scenarioEnvelope = await diagnosisFetchGet(`${DIAGNOSIS_API}/scenario`);
+    diagnosisAssert(scenarioEnvelope.payload.type === "scenario", "Scenario endpoint returned the wrong payload");
+    diagnosis.scenario = scenarioEnvelope.payload.scenario;
+    const body = { request_id: diagnosisRequestId(), scenario_id: diagnosis.scenario.scenario_id, scenario_version: diagnosis.scenario.scenario_version };
+    const prepared = await diagnosisPreparePost(`${DIAGNOSIS_API}/campaigns`, body, null);
+    const { response, envelope } = await diagnosisSendPrepared(prepared);
+    diagnosisAssert(response.status === 201 && envelope.payload.type === "state" && envelope.payload.event === null, "Campaign creation returned the wrong response");
+    await diagnosisReconcileLedger(envelope.payload.state, [], diagnosis.scenario.prior);
+    diagnosis.campaign = envelope.payload.state;
+    diagnosis.latestCurve = null;
+    diagnosis.events = [];
+    renderDiagnosisResult(null);
+    renderDiagnosis();
+  } catch (error) {
+    byId("diagnosis-status").textContent = "Diagnosis scenario unavailable. No synthetic fallback was generated.";
+    diagnosisShowError(`The diagnosis experience could not be verified: ${error.message}`);
+  }
+}
+
+function configureDiagnosis() {
+  byId("diagnosis-run").addEventListener("click", runDiagnosisRecommendation);
+  byId("diagnosis-retry").addEventListener("click", retryDiagnosisRequest);
+  byId("diagnosis-reveal").addEventListener("click", revealDiagnosisTruth);
+}
+
 function renderRealLoadError(error) {
   state.realReady = false;
   byId("real-workbench").classList.add("load-failed");
@@ -1327,7 +2150,20 @@ function configureStaticControls() {
   byId("reveal-button").addEventListener("click", revealTruth);
 }
 
+if (globalThis.__DIAGNOSIS_TEST_HOOKS__) {
+  Object.assign(globalThis.__DIAGNOSIS_TEST_HOOKS__, {
+    reconcileLedger: diagnosisReconcileLedger,
+    reconcileTransition: diagnosisReconcileTransition,
+    validateEvent: diagnosisValidateEvent,
+    validateEnvelopeStatus: diagnosisValidateEnvelopeStatus,
+    validateGetIdentity: diagnosisValidateGetIdentity,
+    validatePreparedIdentity: diagnosisValidatePreparedIdentity,
+  });
+}
+
 document.addEventListener("DOMContentLoaded", () => {
+  configureDiagnosis();
   configureStaticControls();
+  loadDiagnosis();
   loadArtifacts();
 });

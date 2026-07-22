@@ -1,7 +1,8 @@
 # Demo guide
 
-This guide describes the implemented local cartoon-UI experience and how it should be read. The
-interface follows the frozen design contract and is currently awaiting final QA before release.
+This guide describes the implemented closed-loop CV diagnosis and the two supporting experiences
+that remain below it. The diagnosis follows the independently approved restricted-v1 contract; it
+is a synthetic benchmark, not a diagnosis of a real sample or a hardware-control interface.
 
 ## Start the local review demo
 
@@ -14,9 +15,96 @@ python demo/serve.py --artifacts outputs/cv-demo
 Open <http://127.0.0.1:8000>. Use `--host` and `--port` only on a trusted network. This is a small
 local review server, not a production deployment and not a connection to laboratory hardware.
 
-## The page tells two separate stories
+The server creates private diagnosis state outside the public artifact directory. Every diagnosis
+API response uses `Cache-Control: no-store`; private truth, seeds, nonce, and future failure schedule
+remain server-side until an explicit terminal-state reveal.
 
-The cartoon has two provenance layers:
+## The first screen: one closed-loop diagnosis
+
+The main question is:
+
+> What best explains the increase in apparent peak separation from the frozen synthetic
+> healthy/control comparator to the initial abnormal synthetic CV?
+
+Five predefined explanations begin with equal working belief: slow kinetics, uncompensated
+resistance, reference drift, electrode fouling, and concentration/preparation error. These are
+probabilities only inside the stated five-hypothesis synthetic model.
+
+The restricted-v1 Gaussian likelihoods are deliberately small and sharply separated. A single
+successful synthetic observation can therefore produce a posterior numerically very close to
+`0`/`1`. That is a limitation of this toy benchmark, not calibrated confidence that a real sample
+has or does not have a mechanism. The campaign still requires its independent success, distinct-
+operation, budget, and stopping gates.
+
+On page load, the browser:
+
+1. requests the frozen public scenario;
+2. validates the closed Envelope/Payload schema and cryptographic hashes;
+3. checks both 122-point comparator/trigger curves, their discrete peak summaries, units, and QC;
+4. creates a new isolated campaign; and
+5. renders only the server-issued beliefs, budgets, recommendation, reason, and costs.
+
+Before replacing a verified screen, it also reconciles endpoint and campaign identity, event-hash
+continuity, version transitions, attempt/measurement costs, beliefs, successful operations, latest
+curve, and the full ledger against the returned State. A self-consistent object that contradicts
+another object is rejected, and the previous verified screen remains unchanged.
+
+The browser does not calculate a posterior, score actions, write a reason, choose controls, repair a
+belief vector, or reconstruct a curve from peak markers.
+
+## Running the next experiment
+
+`Run recommended experiment` submits the exact server-issued recommendation identity and controls.
+The request's idempotency identity binds the uppercase HTTP method, canonical route path, campaign
+ID, request ID, and SHA-256 hash of the exact serialized request bytes.
+
+- A valid observation may add one verified full synthetic CV or one supporting scalar.
+- A timeout or QC failure is shown explicitly; it never becomes zero or a fake curve.
+- A parseable 422 rejection consumes one attempt, no measurement, preserves beliefs, increments
+  state version, and appears in the timeline with the server's exact reason.
+- After an ambiguous network failure, the page checks campaign state and ledger, then retries only
+  with the same scoped identity and exact retained bytes.
+- A stale or unverifiable response leaves the previous verified screen unchanged.
+
+The central chart always uses the backend's full arrays. A screen-reader table contains every
+verified potential, current, and sweep-direction point. Scalar actions leave the last valid curve
+unchanged.
+
+## Stop and truth reveal
+
+The server applies the frozen order: budget exhaustion, confident-diagnosis gate, then low expected
+information. The browser only renders the returned terminal reason and final five-value belief
+vector.
+
+Truth is never revealed automatically. After the campaign stops, the user may open Expert & audit
+details and select `Reveal synthetic benchmark truth`. The returned private payload must
+cryptographically open the commitment published with the original scenario:
+
+```text
+commitment = SHA-256(JCS({
+  scenario_id,
+  scenario_version,
+  hidden_truth,
+  seed_bundle,
+  reveal_nonce
+}))
+```
+
+The nonce is generated once from 32 cryptographically secure random bytes for the frozen scenario
+version and persists across campaigns/redeploys. Before reveal, the preimage is absent from public
+responses and browser storage. After reveal, publishing it intentionally makes the completed
+synthetic replay reproducible.
+
+## Supporting measurements
+
+Independent Ru is a simulated diagnostic action inside this benchmark. Conductivity remains a
+separate provenance-controlled workflow at `/tempo/#conductivity`; it is not inferred from the CV
+and is never a sixth diagnosis hypothesis.
+
+## Supporting material below the diagnosis
+
+The older page material remains available beneath the flagship loop and has two separate provenance
+layers:
 
 - **Real context:** published, author-processed CV data from named all-iron redox-flow-battery
   electrolyte formulations.
@@ -123,7 +211,7 @@ The synthetic area remains labeled:
 
 > SYNTHETIC TEACHING EMULATOR · SAVED REPLAY · NOT A LAB MEASUREMENT
 
-## The five-state synthetic loop
+## The earlier five-state planner replay
 
 Each saved request is explained with the same five states:
 
@@ -143,7 +231,7 @@ Each saved request is explained with the same five states:
 The response chart is `Normalized response vs scan rate — synthetic teaching model`; its vertical
 axis is `Unitless normalized response`. It is not experimental current density.
 
-## What the three planners mean
+## What the earlier three planners mean
 
 All three planners receive the same public scenario contract and budgets. Each has a fresh
 environment replay and cannot see hidden truth or another planner's observations.
@@ -203,8 +291,9 @@ campaign. An invalid bundle is rejected; the page must not substitute plausible-
 ## Limitations
 
 - This is an illustrated replay. It makes no instrument call and performs no laboratory control.
-- The synthetic model returns a scalar normalized response, not a complete or experimentally
-  calibrated CV.
+- The closed-loop diagnosis returns full synthetic teaching curves but is not a physical or
+  experimentally calibrated CV simulator. The earlier three-planner benchmark separately returns a
+  scalar normalized response.
 - The three predefined labels are teaching hypotheses. Classifying among them is not open-ended
   mechanism discovery and is not a diagnosis of a named real formulation.
 - One CV or one scan-rate scaling relationship does not prove mechanism. Real interpretation can be
