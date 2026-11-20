@@ -1,0 +1,156 @@
+{
+  "schema_version": "rfb_scenario_v1",
+  "scenario_id": "rfbzero_cell_v0",
+  "scenario_version": "1",
+  "provenance": "simulated",
+  "world": {
+    "model_dimension": "0D",
+    "total_attempt_budget": 9,
+    "total_measurement_budget": 9
+  },
+  "action_space": {
+    "serialized_fields": [
+      "charge_current_A",
+      "discharge_current_A",
+      "charge_voltage_limit_V",
+      "discharge_voltage_limit_V",
+      "protocol_duration_s"
+    ],
+    "varying_axes": [
+      "charge_current_A",
+      "discharge_current_A"
+    ],
+    "fixed": {
+      "charge_voltage_limit_V": 1.5,
+      "discharge_voltage_limit_V": 0.5,
+      "protocol_duration_s": 240
+    },
+    "candidates": [
+      {
+        "charge_current_A": 0.06,
+        "discharge_current_A": -0.08,
+        "charge_voltage_limit_V": 1.5,
+        "discharge_voltage_limit_V": 0.5,
+        "protocol_duration_s": 240
+      },
+      {
+        "charge_current_A": 0.06,
+        "discharge_current_A": -0.11,
+        "charge_voltage_limit_V": 1.5,
+        "discharge_voltage_limit_V": 0.5,
+        "protocol_duration_s": 240
+      },
+      {
+        "charge_current_A": 0.06,
+        "discharge_current_A": -0.14,
+        "charge_voltage_limit_V": 1.5,
+        "discharge_voltage_limit_V": 0.5,
+        "protocol_duration_s": 240
+      },
+      {
+        "charge_current_A": 0.1,
+        "discharge_current_A": -0.08,
+        "charge_voltage_limit_V": 1.5,
+        "discharge_voltage_limit_V": 0.5,
+        "protocol_duration_s": 240
+      },
+      {
+        "charge_current_A": 0.1,
+        "discharge_current_A": -0.11,
+        "charge_voltage_limit_V": 1.5,
+        "discharge_voltage_limit_V": 0.5,
+        "protocol_duration_s": 240
+      },
+      {
+        "charge_current_A": 0.1,
+        "discharge_current_A": -0.14,
+        "charge_voltage_limit_V": 1.5,
+        "discharge_voltage_limit_V": 0.5,
+        "protocol_duration_s": 240
+      },
+      {
+        "charge_current_A": 0.14,
+        "discharge_current_A": -0.08,
+        "charge_voltage_limit_V": 1.5,
+        "discharge_voltage_limit_V": 0.5,
+        "protocol_duration_s": 240
+      },
+      {
+        "charge_current_A": 0.14,
+        "discharge_current_A": -0.11,
+        "charge_voltage_limit_V": 1.5,
+        "discharge_voltage_limit_V": 0.5,
+        "protocol_duration_s": 240
+      },
+      {
+        "charge_current_A": 0.14,
+        "discharge_current_A": -0.14,
+        "charge_voltage_limit_V": 1.5,
+        "discharge_voltage_limit_V": 0.5,
+        "protocol_duration_s": 240
+      }
+    ]
+  },
+  "validation": {
+    "ranges": {
+      "charge_current_A": [0.06, 0.14],
+      "discharge_current_A": [-0.14, -0.08],
+      "charge_voltage_limit_V": [1.5, 1.5],
+      "discharge_voltage_limit_V": [0.5, 0.5],
+      "protocol_duration_s": [240, 240]
+    },
+    "fixed_fields": {
+      "charge_voltage_limit_V": 1.5,
+      "discharge_voltage_limit_V": 0.5,
+      "protocol_duration_s": 240
+    },
+    "ocv_50_soc_V": 1.0
+  },
+  "utility": {
+    "energy_reference_J": 10.0,
+    "duration_reference_s": 240.0
+  },
+  "private": {
+    "oracle": {
+      "adapter_id": "discovery_flight_simulator.rfb.rfbzero_adapter",
+      "adapter_version": "1",
+      "reducer_id": "discovery_flight_simulator.rfb.rfbzero_trace_reducer",
+      "reducer_version": "1",
+      "rfbzero_version": "1.0.1",
+      "model_parameters": {
+        "volume_cls": 0.005,
+        "volume_ncls": 0.01,
+        "c_ox_cls": 0.01,
+        "c_red_cls": 0.01,
+        "c_ox_ncls": 0.01,
+        "c_red_ncls": 0.01,
+        "ocv_50_soc": 1.0,
+        "resistance": 0.5,
+        "k_0_cls": 0.001,
+        "k_0_ncls": 0.001,
+        "alpha_cls": 0.5,
+        "alpha_ncls": 0.5,
+        "geometric_area": 5.0,
+        "cls_negolyte": true,
+        "time_step": 0.1,
+        "k_mt": 0.8,
+        "roughness_factor": 26.0,
+        "num_electrons_cls": 1,
+        "num_electrons_ncls": 1,
+        "temperature": 298.0
+      },
+      "capacity_reference_C": 9.648533212331,
+      "charge_first": true,
+      "dependency_pins": {
+        "python": "3.12.12",
+        "numpy": "2.5.1",
+        "scipy": "1.18.0",
+        "rfbzero": "1.0.1"
+      }
+    },
+    "failure_schedule": {
+      "mode": "clean",
+      "failed_candidate_indices": []
+    }
+  }
+}

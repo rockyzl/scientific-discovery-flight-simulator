@@ -132,6 +132,7 @@ could connect their artifacts; v0 has no runtime dependency.
 - [Reproducibility](docs/reproducibility.md)
 - [Limitations](docs/limitations.md)
 - [References and attribution](docs/references.md)
+- [Virtual RFB Cell workbench guide](docs/rfb-workbench-guide.md)
 - [Real CV reference data](docs/real-cv-reference.md)
 
 ## Status and safety

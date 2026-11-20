@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Local simulated virtual redox-flow-battery campaign workbench.">
+  <title>Virtual RFB Cell Campaign Workbench</title>
+  <link rel="stylesheet" href="/rfb-workbench.css">
+  <script src="/rfb-workbench.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#workbench">Skip to workbench</a>
+  <div class="simulation-boundary" role="note">SIMULATED 0D VIRTUAL CELL — NOT A DIGITAL TWIN OR LAB CONTROL</div>
+  <header class="site-header">
+    <div class="layout">
+      <p class="kicker">Local simulation workbench</p>
+      <h1>Virtual RFB Cell Campaign</h1>
+      <p>Review a policy recommendation, record a decision, then explicitly continue the simulation.</p>
+    </div>
+  </header>
+
+  <main id="workbench" class="layout" tabindex="-1">
+    <p id="status" class="status" role="status" aria-live="polite">Loading public scenario…</p>
+
+    <section class="band" aria-labelledby="campaign-heading">
+      <div class="section-heading"><h2 id="campaign-heading">Campaign</h2><span id="phase" class="phase">No campaign loaded</span></div>
+      <form id="campaign-form" class="campaign-form">
+        <label>Campaign ID<input id="campaign-id" name="campaign_id" autocomplete="off" required pattern=".*\S.*" value="virtual-cell-001"></label>
+        <label>Policy<select id="policy-id" name="policy_id"><option value="fixed_grid">Fixed grid</option><option value="random">Random</option><option value="constrained_bo">Constrained Bayesian optimization</option></select></label>
+        <div class="commands"><button id="start-button" type="submit">Start campaign</button><button id="load-button" type="button">Load campaign</button></div>
+      </form>
+      <dl id="campaign-facts" class="facts" aria-label="Campaign details"></dl>
+    </section>
+
+    <section class="band" aria-labelledby="recommendation-heading">
+      <div class="section-heading"><h2 id="recommendation-heading">Current recommendation</h2><span id="recommendation-state" class="quiet">Awaiting a campaign</span></div>
+      <div id="recommendation" class="recommendation"><p>Start or load a campaign to inspect its current recommendation.</p></div>
+    </section>
+
+    <section class="band" aria-labelledby="review-heading">
+      <div class="section-heading"><h2 id="review-heading">Review decision</h2><span class="quiet">Recording a decision does not run a simulation.</span></div>
+      <form id="review-form" class="review-form">
+        <fieldset id="review-controls" disabled>
+          <legend>Choose one decision</legend>
+          <label><input type="radio" name="decision" value="approve" checked> Approve recommendation</label>
+          <label><input type="radio" name="decision" value="reject"> Reject recommendation</label>
+          <label id="reason-field" hidden>Reason code
+            <select id="reason-code" name="reason_code" disabled>
+              <option value="">Select a reason</option>
+              <option value="safety_review">Safety review required</option>
+              <option value="protocol_not_suitable">Protocol not suitable</option>
+              <option value="insufficient_rationale">Insufficient rationale</option>
+              <option value="other_public_reason">Other public reason</option>
+            </select>
+          </label>
+        </fieldset>
+        <button id="record-button" type="submit" disabled>Record decision</button>
+      </form>
+      <div id="continuation" class="continuation" aria-live="polite" hidden>
+        <p id="continuation-text"></p>
+        <button id="resume-button" type="button"></button>
+      </div>
+    </section>
+
+    <section class="band" aria-labelledby="outcome-heading">
+      <div class="section-heading"><h2 id="outcome-heading">Completed simulated outcomes</h2><span class="quiet">Public results only</span></div>
+      <div id="outcomes"><p>No completed simulation outcome is available.</p></div>
+    </section>
+
+    <section class="band" aria-labelledby="history-heading">
+      <div class="section-heading"><h2 id="history-heading">Public event history</h2><button id="refresh-button" type="button" disabled>Refresh</button></div>
+      <ol id="events" class="events"><li>No campaign events loaded.</li></ol>
+    </section>
+  </main>
+</body>
+</html>

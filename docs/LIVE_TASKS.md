@@ -188,3 +188,74 @@ The public MVP is available at
 `https://github.com/rockyzl/scientific-discovery-flight-simulator`. Implementation,
 documentation, independent QA, correction rounds, local validation, publication, and local hub
 registration are complete.
+
+## Active milestone - Virtual RFB Cell Campaign
+
+Status: complete. This is a simulated 0D virtual redox-flow-battery cell
+benchmark and human-approved workflow, not a digital twin, autonomous or
+self-driving lab, hardware controller, or calibrated physical-performance
+model.
+
+Completed/frozen architecture:
+
+- RFB V1 is a finite protocol space with five serialized unit-bearing fields;
+  only `charge_current_A` and `discharge_current_A` vary.
+- The deterministic virtual oracle is pinned to `rfbzero==1.0.1`. The public
+  objective is one frozen scalar utility; it is not Pareto optimization.
+- SQLite is the campaign source of truth. LangGraph plus its SQLite checkpointer
+  is orchestration-only for recommend -> mandatory human approval -> resume.
+- An edit or rejection changes the campaign to `human_intervened`/
+  `workflow_case_study`, making it unrankable in the strict benchmark.
+- Logical replay uses canonical identities and the event chain. Audit timestamps
+  are retained but excluded from deterministic event hashes.
+
+Verified:
+
+- RFB domain/scenario, validation, deterministic policies, oracle adapter,
+  SQLite campaign journal, and execution claim/commit path are implemented.
+- Artifact export and logical replay passed their separate security and
+  correctness review. Public artifact metadata uses a closed schema and export
+  is fail-closed; the original CV/microscopy artifact contract remains intact.
+- Canonical public HTTP routes and LangGraph pause/resume wiring are
+  implemented. Approval records a decision only; a decision-scoped explicit
+  resume is the only route that can advance an approved simulation.
+- An independent API/workflow QA pass approved the HTTP contract after a
+  targeted P1 repair: a completed resume now validates the matching durable
+  approval revision before returning an idempotent result. Focused tests pass
+  and the full suite passed with 184 tests.
+- The isolated local UI server and human-review browser UI are implemented over
+  the frozen HTTP contract. The published artifact replay demo remains
+  unchanged.
+- Final independent browser/API QA is complete and approved.
+- Final verification: `uv run --extra dev pytest -q` passed with 188 tests;
+  `ruff` passed; and Node UI tests passed with 3 tests.
+- Existing CV/microscopy CLI, demo, artifact contract, and verifier remain
+  unchanged through RFB integration.
+
+### Current HTTP contract — frozen for this integration cycle
+
+```text
+POST /api/rfb/campaigns
+  {campaign_id, scenario_id, policy_id}
+  -> 201 {campaign, event_head_sha256}
+
+POST /api/rfb/campaigns/{campaign_id}/approvals
+  {decision_id, expected_revision, decision, ...}
+  -> 200 {campaign, event_head_sha256}
+  Note: this records a human decision only. It does not claim a lease,
+  reserve cost, invoke the virtual oracle, or execute an action.
+
+POST /api/rfb/campaigns/{campaign_id}/resume
+  {decision_id, expected_revision}
+  -> 202 {campaign, event_head_sha256} for one newly advanced transition
+  -> 200 {campaign, event_head_sha256} for an idempotent repeat
+
+GET /api/rfb/campaigns/{campaign_id}
+GET /api/rfb/campaigns/{campaign_id}/events
+GET /api/rfb/scenario
+```
+
+Documentation:
+
+- [Virtual RFB Cell Campaign research plan](rfb-virtual-cell-research-plan.md)
+- [RFB workflow contract](decisions/rfb-workflow-contract.md)
